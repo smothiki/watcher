@@ -106,7 +106,7 @@ func (h *GatewayHandler) Updated(e event.Event) {
 
 			h.logger.Infof("pod[%s] - [%s] unregister successful", pod.Name, s.String())
 		}
-	} else if pod.Status.Phase == apiV1.PodRunning && oldPod.Status.Phase == apiV1.PodPending {
+	} else if pod.Status.Phase == apiV1.PodRunning && !isPodContainersReady(oldPod.Status.Conditions) {
 		for _, s := range services {
 			namespace := pod.GetNamespace()
 

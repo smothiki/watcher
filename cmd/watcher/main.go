@@ -24,7 +24,7 @@ func main() {
 		Before: func(c *cli.Context) error {
 			fmt.Fprintf(c.App.Writer, util.StripIndent(
 				`
-                #    #   ##   #####  ####  #    # ###### #####  
+				#    #   ##   #####  ####  #    # ###### #####
 				#    #  #  #    #   #    # #    # #      #    # 
 				#    # #    #   #   #      ###### #####  #    # 
 				# ## # ######   #   #      #    # #      #####  

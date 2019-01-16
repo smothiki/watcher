@@ -37,7 +37,7 @@ func (s *Service) String() string {
 }
 
 func (s *Service) DNSRecord() string {
-	return fmt.Sprintf(`{"host":"%s","ttl":"60"}`, s.Host)
+	return fmt.Sprintf(`{"host":"%s"}`, s.Host)
 }
 
 func GetPodServices(pod *apiV1.Pod) (services []*Service) {
