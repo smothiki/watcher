@@ -30,6 +30,8 @@ type Service struct {
 	Type   string `validate:"required" json:"type,omitempty"`
 	HcURL  string `validate:"-" json:"hc_path,omitempty"`
 	HcPort int    `validate:"required,min=1,max=65535" json:"hc_port,omitempty"`
+	// FATHER LEVEL DOMAIN NAME
+	FLDName string `validate:"-" json:"-"`
 }
 
 func (s *Service) String() string {
@@ -40,8 +42,19 @@ func (s *Service) DNSRecord() string {
 	return fmt.Sprintf(`{"host":"%s"}`, s.Host)
 }
 
+func (s *Service) DNSName() string {
+	if s.FLDName == "" {
+		return s.Name
+	}
+
+	return s.Name + "/" + s.FLDName
+}
+
 func GetPodServices(pod *apiV1.Pod) (services []*Service) {
-	requireKeys := []string{"SERVICE_NAME", "SERVICE_PORT", "SERVICE_TYPE", "HEALTH_CHECK_URL", "HEALTH_CHECK_PORT"}
+	requireKeys := []string{
+		"SERVICE_NAME", "SERVICE_PORT", "SERVICE_TYPE",
+		"HEALTH_CHECK_URL", "HEALTH_CHECK_PORT", "DNS_FLD_NAME",
+	}
 
 	for _, container := range pod.Spec.Containers {
 		s := new(Service)
@@ -67,6 +80,8 @@ func GetPodServices(pod *apiV1.Pod) (services []*Service) {
 				s.Port = port
 			case "SERVICE_TYPE":
 				s.Type = e.Value
+			case "DNS_FLD_NAME":
+				s.FLDName = e.Value
 			case "HEALTH_CHECK_URL":
 				s.HcURL = e.Value
 			case "HEALTH_CHECK_PORT":

@@ -55,7 +55,7 @@ func main() {
 					pkg.Start()
 				},
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "config, c", Usage: "Load configuration from `FILE`"},
+					&cli.StringFlag{Name: "config_file, cf", Usage: "Load configuration from `FILE`"},
 				},
 			},
 		},

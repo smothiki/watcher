@@ -38,9 +38,9 @@ func (h *EtcdHandler) Init(config *g.Configuration) error {
 	}
 
 	tlsInfo := transport.TLSInfo{
-		CertFile:      config.Handlers.EtcdConfig.CertPath,
-		KeyFile:       config.Handlers.EtcdConfig.KeyPath,
-		TrustedCAFile: config.Handlers.EtcdConfig.CAPath,
+		CertFile:      config.Handlers.EtcdConfig.CertFile,
+		KeyFile:       config.Handlers.EtcdConfig.KeyFile,
+		TrustedCAFile: config.Handlers.EtcdConfig.CAFile,
 	}
 
 	tlsConfig, err := tlsInfo.ClientConfig()
@@ -118,7 +118,7 @@ func (h *EtcdHandler) Updated(e event.Event) {
 		for _, s := range services {
 			res, _ := h.client.Get(ctx, filepath.Join(h.config.Prefix, s.Name), clientv3.WithPrefix())
 			for _, item := range res.Kvs {
-				key := filepath.Join(h.config.Prefix, s.Name, strings.Replace(s.Host, ".", "-", -1))
+				key := filepath.Join(h.config.Prefix, s.DNSName(), strings.Replace(s.Host, ".", "-", -1))
 				if string(item.Key) != key {
 					continue
 				}
@@ -133,9 +133,13 @@ func (h *EtcdHandler) Updated(e event.Event) {
 		}
 	} else if pod.Status.Phase == apiV1.PodRunning && !isPodContainersReady(oldPod.Status.Conditions) {
 		for _, s := range services {
-			key := filepath.Join(h.config.Prefix, s.Name, strings.Replace(s.Host, ".", "-", -1))
+			key := filepath.Join(h.config.Prefix, s.DNSName(), strings.Replace(s.Host, ".", "-", -1))
 
-			h.client.Put(ctx, key, s.DNSRecord())
+			if _, err := h.client.Put(ctx, key, s.DNSRecord()); err != nil {
+				//添加时出现错误，需要联系管理员
+				continue
+			}
+
 			h.logger.Infof("pod[%s] - [%s] add dns record successful", pod.Name, s.String())
 		}
 	} else {

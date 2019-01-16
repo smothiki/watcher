@@ -9,7 +9,7 @@ import (
 
 	"github.com/srelab/watcher/pkg/util"
 
-	"github.com/go-resty/resty"
+	"git.srelab.cn/go/resty"
 
 	apiV1 "k8s.io/api/core/v1"
 

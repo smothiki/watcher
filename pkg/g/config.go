@@ -19,12 +19,6 @@ type Configuration struct {
 	Handlers   *Handlers   `mapstructure:"Handlers"`
 }
 
-type Log struct {
-	Path   string    `mapstructure:"Path"`
-	Level  log.Level `mapstructure:"Level"`
-	Format string    `mapstructure:"Format"`
-}
-
 type Kubernetes struct {
 	Config string `mapstructure:"Config"`
 
@@ -43,9 +37,9 @@ type GatewayConfig struct {
 }
 
 type EtcdConfig struct {
-	CertPath  string        `mapstructure:"CertPath"`
-	KeyPath   string        `mapstructure:"KeyPath"`
-	CAPath    string        `mapstructure:"CAPath"`
+	CertFile  string        `mapstructure:"CertFile"`
+	KeyFile   string        `mapstructure:"KeyFile"`
+	CAFile    string        `mapstructure:"CAFile"`
 	Timeout   time.Duration `mapstructure:"Timeout"`
 	Prefix    string        `mapstructure:"Prefix"`
 	Endpoints []string      `mapstructure:"Endpoints"`
@@ -114,9 +108,7 @@ var (
 )
 
 func ReadInConfig(ctx *cli.Context) error {
-	viper.SetConfigType("yaml")
-	viper.SetConfigName("config")
-	viper.AddConfigPath(ctx.String("config"))
+	viper.SetConfigFile(ctx.String("config_file"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("Fatal error config file: %s \n", err)
