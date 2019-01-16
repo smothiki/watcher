@@ -34,22 +34,27 @@ type Service struct {
 	FLDName string `validate:"-" json:"-"`
 }
 
+// Return a string consisting of host and port
 func (s *Service) String() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
 }
 
+// Return a legal coredns parsing record
 func (s *Service) DNSRecord() string {
 	return fmt.Sprintf(`{"host":"%s"}`, s.Host)
 }
 
+// Return the name of Dns, which consists of FLD and name
 func (s *Service) DNSName() string {
 	if s.FLDName == "" {
 		return s.Name
 	}
 
-	return s.Name + "/" + s.FLDName
+	return s.FLDName + "/" + s.Name
 }
 
+// Return a set of services from the pod's Containers
+// Return an empty slice when Containers is empty
 func GetPodServices(pod *apiV1.Pod) (services []*Service) {
 	requireKeys := []string{
 		"SERVICE_NAME", "SERVICE_PORT", "SERVICE_TYPE",
