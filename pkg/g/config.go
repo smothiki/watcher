@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-playground/validator"
+
 	"github.com/srelab/common/log"
 
 	"github.com/spf13/viper"
@@ -14,9 +16,16 @@ import (
 // Configuration are the available config values
 type Configuration struct {
 	Log        log.Config  `mapstructure:"Log"`
+	Http       *Http       `mapstructure:"Http"`
 	Resource   *Resource   `mapstructure:"Resource"`
 	Kubernetes *Kubernetes `mapstructure:"Kubernetes"`
 	Handlers   *Handlers   `mapstructure:"Handlers"`
+}
+
+type Http struct {
+	Host  string `mapstructure:"Host" validate:"ipv4"`
+	Port  int    `mapstructure:"Port" validate:"gte=1,lte=65535"`
+	Debug bool   `mapstructure:"Debug"`
 }
 
 type Kubernetes struct {
@@ -79,6 +88,11 @@ var (
 			Level: "info",
 		},
 
+		Http: &Http{
+			Host: "0.0.0.0",
+			Port: 9999,
+		},
+
 		Kubernetes: &Kubernetes{
 			Config: "",
 		},
@@ -127,4 +141,12 @@ func Config() *Configuration {
 	defer lock.RUnlock()
 
 	return config
+}
+
+func (h *Http) GetListenAddr() string {
+	if err := validator.New().Struct(h); err != nil {
+		return "0.0.0.0:9999"
+	}
+
+	return fmt.Sprintf("%s:%d", h.Host, h.Port)
 }

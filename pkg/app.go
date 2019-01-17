@@ -1,9 +1,11 @@
 package pkg
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/srelab/watcher/pkg/event"
 
@@ -44,19 +46,19 @@ func Start() {
 
 	// initialize all handler
 	if err := defulatHandler.Init(g.Config()); err != nil {
-		log.Panicf("init default handler error: ", err)
+		log.Panic("init default handler error: ", err)
 	}
 
 	if err := saHandler.Init(g.Config()); err != nil {
-		log.Panicf("init sa handler error: ", err)
+		log.Panic("init sa handler error: ", err)
 	}
 
 	if err := gatewayHandler.Init(g.Config()); err != nil {
-		log.Panicf("init gateway handler error: ", err)
+		log.Panic("init gateway handler error: ", err)
 	}
 
 	if err := etcdHandler.Init(g.Config()); err != nil {
-		log.Panicf("init etcd handler error: ", err)
+		log.Panic("init etcd handler error: ", err)
 	}
 
 	// close the etcd client
@@ -327,8 +329,20 @@ func Start() {
 		go c.Run(stopCh)
 	}
 
+	// Open the built-in handler interface as http
+	engine := handlers.NewServerEngine()
+	go engine.Start(g.Config().Http.GetListenAddr())
+
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGTERM)
 	signal.Notify(sigterm, syscall.SIGINT)
 	<-sigterm
+
+	// Wait for signal to gracefully shutdown the server with a timeout of 10 seconds.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := engine.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 }

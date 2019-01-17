@@ -14,7 +14,7 @@ Kubernetes:
 
 Handlers:
   Gateway:
-    - Host: 
+    - Host:
       Port: 8888
       Namespace: default
       Username: admin
