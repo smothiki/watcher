@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/srelab/common/log"
 
 	"github.com/srelab/watcher/pkg"
 	"github.com/srelab/watcher/pkg/g"
-	"github.com/srelab/watcher/pkg/util"
-
 	"github.com/urfave/cli"
 )
 
@@ -22,15 +21,14 @@ func main() {
 		Compiled: time.Now(),
 		Authors:  []cli.Author{{Name: g.AUTHOR, Email: g.MAIL}},
 		Before: func(c *cli.Context) error {
-			fmt.Fprintf(c.App.Writer, util.StripIndent(
-				`
-				#    #   ##   #####  ####  #    # ###### #####
-				#    #  #  #    #   #    # #    # #      #    # 
-				#    # #    #   #   #      ###### #####  #    # 
-				# ## # ######   #   #      #    # #      #####  
-				##  ## #    #   #   #    # #    # #      #   #  
-				#    # #    #   #    ####  #    # ###### #    #  
-			`))
+			fmt.Fprintf(c.App.Writer, strings.TrimLeft(strings.Replace(`
+			#    #   ##   #####  ####  #    # ###### #####
+			#    #  #  #    #   #    # #    # #      #    #
+			#    # #    #   #   #      ###### #####  #    # 
+			# ## # ######   #   #      #    # #      #####  
+			##  ## #    #   #   #    # #    # #      #   #  
+			#    # #    #   #    ####  #    # ###### #    #  
+			`, "\t", "", -1), "\n"))
 			return nil
 		},
 		Commands: []cli.Command{

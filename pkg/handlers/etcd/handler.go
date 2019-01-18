@@ -1,4 +1,4 @@
-package handlers
+package etcd
 
 import (
 	"context"
@@ -6,29 +6,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srelab/watcher/pkg/util"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	"github.com/pkg/errors"
 	apiV1 "k8s.io/api/core/v1"
 
 	"github.com/coreos/etcd/pkg/transport"
 	"github.com/srelab/common/log"
-	"github.com/srelab/watcher/pkg/event"
 	"github.com/srelab/watcher/pkg/g"
 	"go.etcd.io/etcd/clientv3"
 )
 
-type EtcdHandler struct {
+type Handler struct {
 	config *g.EtcdConfig
 	client *clientv3.Client
 	logger log.Logger
 }
 
-func (h *EtcdHandler) Name() string {
+func (h *Handler) Name() string {
 	return "etcd"
 }
 
-func (h *EtcdHandler) Init(config *g.Configuration) error {
+func (h *Handler) Init(config *g.Configuration) error {
 	h.config = config.Handlers.EtcdConfig
 	h.config.Prefix = strings.TrimRight(h.config.Prefix, "/")
 
@@ -63,12 +62,12 @@ func (h *EtcdHandler) Init(config *g.Configuration) error {
 	return nil
 }
 
-func (h *EtcdHandler) Close() {
+func (h *Handler) Close() {
 	h.client.Close()
 }
 
-func (h *EtcdHandler) Created(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
+func (h *Handler) Created(e *shared.Event) {
+	if e.ResourceType != shared.ResourceTypePod {
 		h.logger.Debug("invalid resource type, skipped")
 		return
 	}
@@ -77,8 +76,8 @@ func (h *EtcdHandler) Created(e event.Event) {
 	h.logger.Debugf("pod[%s] did not do anything when created, skipped", pod.Name)
 }
 
-func (h *EtcdHandler) Deleted(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
+func (h *Handler) Deleted(e *shared.Event) {
+	if e.ResourceType != shared.ResourceTypePod {
 		h.logger.Debug("invalid resource type, skipped")
 		return
 	}
@@ -87,60 +86,51 @@ func (h *EtcdHandler) Deleted(e event.Event) {
 	h.logger.Debugf("pod[%s] did not do anything when deleted, skipped", pod.Name)
 }
 
-func (h *EtcdHandler) Updated(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
-		h.logger.Debug("invalid resource type, skipped")
+func (h *Handler) Updated(event *shared.Event) {
+	// Convert the associated object in the event to pod
+	pod, oldPod := event.Object.(*apiV1.Pod), event.OldObject.(*apiV1.Pod)
+
+	// Get all valid services from the pod
+	services, err := event.GetPodServices(pod)
+	if err != nil {
+		h.logger.Debug(err)
 		return
 	}
 
-	pod := e.Object.(*apiV1.Pod)
-	oldPod := e.OldObject.(*apiV1.Pod)
-
-	if pod.Status.PodIP == "" {
-		h.logger.Debugf("pod[%s] has not yet obtained a valid IP, skipped", pod.Name)
-		return
-	}
-
-	if !isPodContainersReady(pod.Status.Conditions) {
-		h.logger.Debugf("pod[%s] containers not ready, skipped", pod.Name)
-		return
-	}
-
-	if pod.GetFinalizers() != nil {
-		h.logger.Debugf("pod[%s] is about to be deleted", pod.Name)
-		return
-	}
-
-	services := util.GetPodServices(pod)
 	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
-
 	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
-		for _, s := range services {
-			res, _ := h.client.Get(ctx, filepath.Join(h.config.Prefix, s.Name), clientv3.WithPrefix())
+		for _, service := range services {
+			res, err := h.client.Get(ctx, filepath.Join(h.config.Prefix, service.Name), clientv3.WithPrefix())
+			if err != nil {
+				h.logger.Info("get error", err)
+				// 获取 Key 出现错误，需要联系管理员
+				continue
+			}
+
 			for _, item := range res.Kvs {
-				key := filepath.Join(h.config.Prefix, s.DNSName(), strings.Replace(s.Host, ".", "-", -1))
+				key := filepath.Join(h.config.Prefix, service.DNSName(), strings.Replace(service.Host, ".", "-", -1))
 				if string(item.Key) != key {
 					continue
 				}
 
 				if _, err := h.client.Delete(ctx, key); err != nil {
-					//删除时出现错误，需要联系管理员
+					h.logger.Info("delete error", err)
 					continue
 				}
 			}
 
-			h.logger.Infof("pod[%s] - [%s] remove dns record successful", pod.Name, s.String())
+			h.logger.Infof("pod[%s] - [%s] remove dns record successful", pod.Name, service.String())
 		}
-	} else if pod.Status.Phase == apiV1.PodRunning && !isPodContainersReady(oldPod.Status.Conditions) {
-		for _, s := range services {
-			key := filepath.Join(h.config.Prefix, s.DNSName(), strings.Replace(s.Host, ".", "-", -1))
-
-			if _, err := h.client.Put(ctx, key, s.DNSRecord()); err != nil {
+	} else if pod.Status.Phase == apiV1.PodRunning && !shared.IsPodContainersReady(oldPod.Status.Conditions) {
+		for _, service := range services {
+			key := filepath.Join(h.config.Prefix, service.DNSName(), strings.Replace(service.Host, ".", "-", -1))
+			if _, err := h.client.Put(ctx, key, service.DNSRecord()); err != nil {
 				//添加时出现错误，需要联系管理员
+				h.logger.Info("add error", err)
 				continue
 			}
 
-			h.logger.Infof("pod[%s] - [%s] add dns record successful", pod.Name, s.String())
+			h.logger.Infof("pod[%s] - [%s] add dns record successful", pod.Name, service.String())
 		}
 	} else {
 		h.logger.Errorf("pod[%s] unknown event, need admin to handle", pod.Name)

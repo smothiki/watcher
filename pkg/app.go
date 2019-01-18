@@ -7,7 +7,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/srelab/watcher/pkg/event"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/srelab/watcher/pkg/handlers/etcd"
+	"github.com/srelab/watcher/pkg/handlers/gateway"
+	"github.com/srelab/watcher/pkg/handlers/public"
+	"github.com/srelab/watcher/pkg/handlers/sa"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	"github.com/srelab/common/log"
 
@@ -21,7 +27,6 @@ import (
 
 	"github.com/srelab/watcher/pkg/controller"
 	"github.com/srelab/watcher/pkg/g"
-	"github.com/srelab/watcher/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -34,18 +39,18 @@ func Start() {
 
 	_, err := rest.InClusterConfig()
 	if err != nil {
-		kubeClient = util.GetClientOutOfCluster()
+		kubeClient = GetClientOutOfCluster()
 	} else {
-		kubeClient = util.GetClient()
+		kubeClient = GetClient()
 	}
 
-	var defulatHandler = new(handlers.DefaultHandler)
-	var saHandler = new(handlers.SAHandler)
-	var gatewayHandler = new(handlers.GatewayHandler)
-	var etcdHandler = new(handlers.EtcdHandler)
+	var publicHandler = new(public.Handler)
+	var saHandler = new(sa.Handler)
+	var gatewayHandler = new(gateway.Handler)
+	var etcdHandler = new(etcd.Handler)
 
 	// initialize all handler
-	if err := defulatHandler.Init(g.Config()); err != nil {
+	if err := publicHandler.Init(g.Config()); err != nil {
 		log.Panic("init default handler error: ", err)
 	}
 
@@ -83,7 +88,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypePod, []handlers.Handler{gatewayHandler, etcdHandler, saHandler})
+		c := controller.New(kubeClient, informer, shared.ResourceTypePod, []shared.Handler{gatewayHandler, etcdHandler, saHandler})
 		go c.Run(stopCh)
 	}
 
@@ -105,7 +110,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeDaemonSet, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeDaemonSet, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -127,7 +132,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeReplicaSet, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicaSet, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -149,7 +154,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeService, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeService, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -171,7 +176,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeDeployment, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeDeployment, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -193,7 +198,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeNamespace, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeNamespace, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -215,7 +220,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeReplicationController, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicationController, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -237,7 +242,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeJob, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeJob, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -259,7 +264,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypePersistentVolume, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypePersistentVolume, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -281,7 +286,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeSecret, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeSecret, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -303,7 +308,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeConfigMap, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeConfigMap, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
@@ -325,12 +330,18 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, event.ResourceTypeIngress, []handlers.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeIngress, []shared.Handler{})
 		go c.Run(stopCh)
 	}
 
 	// Open the built-in handler interface as http
-	engine := handlers.NewServerEngine()
+	engine := handlers.NewHandlersEngine()
+
+	// Selectively add routes when some handler need to expose the interface
+	handlersRoute := engine.Group("/handlers")
+	etcdHandler.AddRoutes(handlersRoute.Group("/etcd"))
+	gatewayHandler.AddRoutes(handlersRoute.Group("/gateway"))
+
 	go engine.Start(g.Config().Http.GetListenAddr())
 
 	sigterm := make(chan os.Signal, 1)
@@ -345,4 +356,40 @@ func Start() {
 	if err := engine.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// GetClient returns a k8s clientset to the request from inside of cluster
+func GetClient() kubernetes.Interface {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("can not get watch config: %v", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("can not create watch client: %v", err)
+	}
+
+	return clientset
+}
+
+func buildOutOfClusterConfig() (*rest.Config, error) {
+	kubeconfigPath := g.Config().Kubernetes.Config
+	if kubeconfigPath == "" {
+		kubeconfigPath = os.Getenv("HOME") + "/.kube/config"
+	}
+
+	return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+}
+
+// GetClientOutOfCluster returns a k8s clientset to the request from outside of cluster
+func GetClientOutOfCluster() kubernetes.Interface {
+	config, err := buildOutOfClusterConfig()
+	if err != nil {
+		log.Fatalf("Can not get kubernetes config: %v", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+
+	return clientset
 }

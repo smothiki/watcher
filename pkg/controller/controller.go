@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/srelab/watcher/pkg/handlers"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/srelab/common/log"
-	"github.com/srelab/watcher/pkg/event"
-	"github.com/srelab/watcher/pkg/util"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -28,53 +25,53 @@ type Controller struct {
 	clientset kubernetes.Interface
 	queue     workqueue.RateLimitingInterface
 	informer  cache.SharedIndexInformer
-	handlers  []handlers.Handler
+	handlers  []shared.Handler
 }
 
-func New(client kubernetes.Interface, informer cache.SharedIndexInformer, resourceType event.ResourceType, handlers []handlers.Handler) *Controller {
-	var e event.Event
+func New(client kubernetes.Interface, informer cache.SharedIndexInformer, resourceType shared.ResourceType, handlers []shared.Handler) *Controller {
+	var event shared.Event
 	var err error
 
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		// 当资源第一次加入到Informer的缓存后调用
+		// 当资源第一次加入到 Informer 的缓存后调用
 		AddFunc: func(object interface{}) {
-			e.Key, err = cache.MetaNamespaceKeyFunc(object)
-			e.Action = "create"
-			e.ResourceType = resourceType
-			e.Namespace = util.GetObjectMetaData(object).Namespace
-			e.Object = object
+			event.Key, err = cache.MetaNamespaceKeyFunc(object)
+			event.Action = "create"
+			event.ResourceType = resourceType
+			event.Namespace = event.GetObjectMetaData().Namespace
+			event.Object = object
 
 			if err == nil {
-				queue.Add(e)
+				queue.Add(event)
 			}
 		},
 
 		// 当既有资源被修改时调用。oldObj 是资源的上一个状态，newObj 则是新状态
 		// resync 时此方法也被调用，即使对象没有任何变化
 		UpdateFunc: func(oldObject, object interface{}) {
-			e.Key, err = cache.MetaNamespaceKeyFunc(oldObject)
-			e.Action = "update"
-			e.ResourceType = resourceType
-			e.Namespace = util.GetObjectMetaData(object).Namespace
-			e.Object = object
-			e.OldObject = oldObject
+			event.Key, err = cache.MetaNamespaceKeyFunc(oldObject)
+			event.Action = "update"
+			event.ResourceType = resourceType
+			event.Namespace = event.GetObjectMetaData().Namespace
+			event.Object = object
+			event.OldObject = oldObject
 
 			if err == nil {
-				queue.Add(e)
+				queue.Add(event)
 			}
 		},
 
-		// 当既有资源被删除时调用，obj是对象的最后状态，如果最后状态未知则返回DeletedFinalStateUnknown
+		// 当既有资源被删除时调用，obj是对象的最后状态，如果最后状态未知则返回 DeletedFinalStateUnknown
 		DeleteFunc: func(object interface{}) {
-			e.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(object)
-			e.Action = "delete"
-			e.ResourceType = resourceType
-			e.Namespace = util.GetObjectMetaData(object).Namespace
-			e.Object = object
+			event.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(object)
+			event.Action = "delete"
+			event.ResourceType = resourceType
+			event.Namespace = event.GetObjectMetaData().Namespace
+			event.Object = object
 
 			if err == nil {
-				queue.Add(e)
+				queue.Add(event)
 			}
 		},
 	})
@@ -123,64 +120,62 @@ func (c *Controller) runWorker() {
 }
 
 func (c *Controller) processNextItem() bool {
-	e, quit := c.queue.Get()
+	item, quit := c.queue.Get()
 
 	if quit {
 		return false
 	}
-	defer c.queue.Done(e)
+	defer c.queue.Done(item)
 
-	err := c.processItem(e.(event.Event))
+	// Convert the item obtained by queue to event
+	event := item.(shared.Event)
+
+	// Give the event to each handler
+	err := c.processItem(&event)
 	if err == nil {
 		// No error, reset the ratelimit counters
-		c.queue.Forget(e)
-	} else if c.queue.NumRequeues(e) < maxRetries {
-		log.Errorf("error processing %s (will retry): %v", e.(event.Event).Key, err)
-		c.queue.AddRateLimited(e)
+		c.queue.Forget(event)
+	} else if c.queue.NumRequeues(event) < maxRetries {
+		log.Errorf("error processing %s (will retry): %v", event.Key, err)
+		c.queue.AddRateLimited(event)
 	} else {
 		// err != nil and too many retries
-		log.Errorf("error processing %s (giving up): %v", e.(event.Event).Key, err)
-		c.queue.Forget(e)
+		log.Errorf("error processing %s (giving up): %v", event.Key, err)
+		c.queue.Forget(event)
 		utilruntime.HandleError(err)
 	}
 
 	return true
 }
 
-/* TODOs
-- Enhance event creation using client-side cacheing machanisms - pending
-- Enhance the processItem to classify events - done
-- Send alerts correspoding to events - done
-*/
-
-func (c *Controller) processItem(e event.Event) error {
-	obj, _, err := c.informer.GetIndexer().GetByKey(e.Key)
-	if err != nil {
-		return fmt.Errorf("error fetching object with key %s from store: %v", e.Key, err)
-	}
+func (c *Controller) processItem(event *shared.Event) error {
+	//obj, _, err := c.informer.GetIndexer().GetByKey(event.Key)
+	//if err != nil {
+	//	return fmt.Errorf("error fetching object with key %s from store: %v", event.Key, err)
+	//}
 
 	// get object's metedata
-	objectMeta := util.GetObjectMetaData(obj)
+	objectMeta := event.GetObjectMetaData()
 
 	// process events based on its type
-	switch e.Action {
+	switch event.Action {
 	case "create":
 		// compare CreationTimestamp and serverStartTime and alert only on latest events
 		// Could be Replaced by using Delta or DeltaFIFO
 		if objectMeta.CreationTimestamp.Sub(serverStartTime).Seconds() > 0 {
 			for _, handler := range c.handlers {
-				handler.Created(e)
+				handler.Created(event)
 			}
 			return nil
 		}
 	case "update":
 		for _, handler := range c.handlers {
-			handler.Updated(e)
+			handler.Updated(event)
 		}
 		return nil
 	case "delete":
 		for _, handler := range c.handlers {
-			handler.Deleted(e)
+			handler.Deleted(event)
 		}
 		return nil
 	}

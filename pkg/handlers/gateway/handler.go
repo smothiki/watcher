@@ -1,4 +1,4 @@
-package handlers
+package gateway
 
 import (
 	"encoding/json"
@@ -7,29 +7,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srelab/watcher/pkg/util"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	"git.srelab.cn/go/resty"
 
 	apiV1 "k8s.io/api/core/v1"
 
 	"github.com/srelab/common/log"
-	"github.com/srelab/watcher/pkg/event"
 	"github.com/srelab/watcher/pkg/g"
 )
 
-type GatewayHandler struct {
+type Handler struct {
 	logger  log.Logger
 	configs []g.GatewayConfig
 }
 
-func (h *GatewayHandler) Name() string {
+func (h *Handler) Name() string {
 	return "gateway"
 }
 
 // initialize the gateway handler
 // it will be responsible for handling kube events, regsiter and unregsiter pods
-func (h *GatewayHandler) Init(config *g.Configuration) error {
+func (h *Handler) Init(config *g.Configuration) error {
 	h.configs = config.Handlers.GatewayConfigs
 	h.logger = log.With("handlers", h.Name())
 
@@ -39,8 +38,8 @@ func (h *GatewayHandler) Init(config *g.Configuration) error {
 // handling the created event,
 // since the kube only generates the created event when a new `deployment` is created,
 // only the log is output here.
-func (h *GatewayHandler) Created(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
+func (h *Handler) Created(e *shared.Event) {
+	if e.ResourceType != shared.ResourceTypePod {
 		h.logger.Debug("invalid resource type, skipped")
 		return
 	}
@@ -49,8 +48,8 @@ func (h *GatewayHandler) Created(e event.Event) {
 	h.logger.Debugf("pod[%s] did not do anything when created, skipped", pod.Name)
 }
 
-func (h *GatewayHandler) Deleted(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
+func (h *Handler) Deleted(e *shared.Event) {
+	if e.ResourceType != shared.ResourceTypePod {
 		h.logger.Debug("invalid resource type, skipped")
 		return
 	}
@@ -59,31 +58,17 @@ func (h *GatewayHandler) Deleted(e event.Event) {
 	h.logger.Debugf("pod[%s] did not do anything when deleted, skipped", pod.Name)
 }
 
-func (h *GatewayHandler) Updated(e event.Event) {
-	if e.ResourceType != event.ResourceTypePod {
-		h.logger.Debug("invalid resource type, skipped")
+func (h *Handler) Updated(event *shared.Event) {
+	// Convert the associated object in the event to pod
+	pod, oldPod := event.Object.(*apiV1.Pod), event.OldObject.(*apiV1.Pod)
+
+	// Get all valid services from the pod
+	services, err := event.GetPodServices(pod)
+	if err != nil {
+		h.logger.Debug(err)
 		return
 	}
 
-	pod := e.Object.(*apiV1.Pod)
-	oldPod := e.OldObject.(*apiV1.Pod)
-
-	if pod.Status.PodIP == "" {
-		h.logger.Debugf("pod[%s] has not yet obtained a valid IP, skipped", pod.Name)
-		return
-	}
-
-	if !isPodContainersReady(pod.Status.Conditions) {
-		h.logger.Debugf("pod[%s] containers not ready, skipped", pod.Name)
-		return
-	}
-
-	if pod.GetFinalizers() != nil {
-		h.logger.Debugf("pod[%s] is about to be deleted", pod.Name)
-		return
-	}
-
-	services := util.GetPodServices(pod)
 	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
 		for _, s := range services {
 			namespace := pod.GetNamespace()
@@ -106,7 +91,7 @@ func (h *GatewayHandler) Updated(e event.Event) {
 
 			h.logger.Infof("pod[%s] - [%s] unregister successful", pod.Name, s.String())
 		}
-	} else if pod.Status.Phase == apiV1.PodRunning && !isPodContainersReady(oldPod.Status.Conditions) {
+	} else if pod.Status.Phase == apiV1.PodRunning && !shared.IsPodContainersReady(oldPod.Status.Conditions) {
 		for _, s := range services {
 			namespace := pod.GetNamespace()
 
@@ -136,16 +121,16 @@ func (h *GatewayHandler) Updated(e event.Event) {
 		fmt.Println(string(j))
 		fmt.Println(string(oj))
 
-		h.logger.Errorf("pod[%s] unknown event, need admin to handle", pod.Name)
+		h.logger.Errorf("pod[%s] unknown event, need a-e", pod.Name)
 	}
 }
 
-func (h *GatewayHandler) getRequest() *resty.Request {
+func (h *Handler) getRequest() *resty.Request {
 	r := resty.New().SetRetryCount(3).SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(10 * time.Second)
 	return r.R().SetHeader("Content-Type", "application/json")
 }
 
-func (h *GatewayHandler) getURL(namespace, path string) string {
+func (h *Handler) getURL(namespace, path string) string {
 	for _, config := range h.configs {
 		if config.Namespace == namespace {
 			return fmt.Sprintf("http://%s:%s/%s", config.Host, config.Port, strings.TrimLeft(path, "/"))
@@ -153,18 +138,4 @@ func (h *GatewayHandler) getURL(namespace, path string) string {
 	}
 
 	return ""
-}
-
-func isPodContainersReady(conditions []apiV1.PodCondition) bool {
-	for _, condition := range conditions {
-		if condition.Type != "ContainersReady" {
-			continue
-		}
-
-		if condition.Status == apiV1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
 }

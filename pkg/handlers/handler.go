@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/srelab/watcher/pkg/handlers/shared"
+
 	"github.com/srelab/common/log"
 	"github.com/srelab/common/slice"
 
@@ -15,20 +17,8 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo"
-	"github.com/srelab/watcher/pkg/event"
 	"github.com/srelab/watcher/pkg/g"
 )
-
-// Handler is implemented by any handler.
-// The Handle method is used to process event
-type Handler interface {
-	Name() string
-
-	Init(config *g.Configuration) error
-	Created(event event.Event)
-	Deleted(event event.Event)
-	Updated(event event.Event)
-}
 
 // Webserver validation function
 type Validator struct {
@@ -66,45 +56,7 @@ func (BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
 	return nil
 }
 
-// Default handler implements Handler interface,
-// print each event with JSON format
-type DefaultHandler struct {
-	Handler
-}
-
-func (h *DefaultHandler) Name() string {
-	return "default"
-}
-
-// Init initializes handler configuration
-// Do nothing for default handler
-func (h *DefaultHandler) Init(config *g.Configuration) error {
-	return nil
-}
-
-func (h *DefaultHandler) Created(e event.Event) {
-}
-
-func (h *DefaultHandler) Deleted(e event.Event) {
-}
-
-func (h *DefaultHandler) Updated(e event.Event) {
-}
-
-// Responder in order to unify the returned response structure
-type Responder struct {
-	Status     int         `json:"-"`
-	Success    bool        `json:"success"`
-	Result     interface{} `json:"result"`
-	Msg        interface{} `json:"msg"`
-	Pagination interface{} `json:"pagination,omitempty"`
-}
-
-func (r Responder) JSON(ctx echo.Context) error {
-	return ctx.JSON(r.Status, r)
-}
-
-func NewServerEngine() *echo.Echo {
+func NewHandlersEngine() *echo.Echo {
 	engine := echo.New()
 	logger := log.With("handlers", "engine")
 
@@ -199,7 +151,7 @@ func NewServerEngine() *echo.Echo {
 			if ctx.Request().Method == http.MethodHead {
 				err = ctx.NoContent(code)
 			} else {
-				err = Responder{Status: code, Success: false, Msg: msg}.JSON(ctx)
+				err = shared.Responder{Status: code, Success: false, Msg: msg}.JSON(ctx)
 			}
 			if err != nil {
 				logger.Error(err)
