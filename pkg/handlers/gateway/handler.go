@@ -70,15 +70,15 @@ func (h *Handler) Updated(event *shared.Event) {
 	}
 
 	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
-		for _, s := range services {
+		for _, service := range services {
 			namespace := pod.GetNamespace()
-			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/unregister", s.Name))
+			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/unregister", service.Name))
 			if regURL == "" {
-				h.logger.Errorf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, s.String())
+				h.logger.Warnf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, service.String())
 				continue
 			}
 
-			res, err := h.getRequest().SetBody(s).Post(regURL)
+			res, err := h.getRequest().SetBody(service).Post(regURL)
 			if err != nil {
 				h.logger.Errorf("pod[%s] - [%s] unregister error: %s", pod.Name, res.String(), err)
 				continue
@@ -89,20 +89,20 @@ func (h *Handler) Updated(event *shared.Event) {
 				continue
 			}
 
-			h.logger.Infof("pod[%s] - [%s] unregister successful", pod.Name, s.String())
+			h.logger.Infof("pod[%s] - [%s] unregister successful", pod.Name, service.String())
 		}
 	} else if pod.Status.Phase == apiV1.PodRunning && !shared.IsPodContainersReady(oldPod.Status.Conditions) {
-		for _, s := range services {
+		for _, service := range services {
 			namespace := pod.GetNamespace()
 
 			// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
-			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/register", s.Name))
+			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/register", service.Name))
 			if regURL == "" {
-				h.logger.Errorf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, s.String())
+				h.logger.Warnf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, service.String())
 				continue
 			}
 
-			res, err := h.getRequest().SetBody(s).Post(regURL)
+			res, err := h.getRequest().SetBody(service).Post(regURL)
 			if err != nil {
 				h.logger.Errorf("pod[%s] - [%s] register error: %s", pod.Name, res.String(), err)
 				continue
@@ -113,7 +113,7 @@ func (h *Handler) Updated(event *shared.Event) {
 				continue
 			}
 
-			h.logger.Infof("pod[%s] - [%s] register successful", pod.Name, s.String())
+			h.logger.Infof("pod[%s] - [%s] register successful", pod.Name, service.String())
 		}
 	} else {
 		j, _ := json.Marshal(pod)
