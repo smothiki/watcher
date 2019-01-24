@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/srelab/common/log"
 	"github.com/srelab/watcher/pkg/g"
 	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 )
 
 type Handler struct {
@@ -59,6 +61,8 @@ func (h *Handler) Init(config *g.Configuration) error {
 
 	h.client = client
 	h.logger = log.With("handlers", h.Name())
+
+	fmt.Println(h.eGet("/skydns", true, 1))
 	return nil
 }
 
@@ -97,10 +101,9 @@ func (h *Handler) Updated(event *shared.Event) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
 	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
 		for _, service := range services {
-			res, err := h.client.Get(ctx, filepath.Join(h.config.Prefix, service.Name), clientv3.WithPrefix())
+			res, err := h.eGet(filepath.Join(h.config.Prefix, service.DNSName()), true, 0)
 			if err != nil {
 				h.logger.Info("get error", err)
 				// 获取 Key 出现错误，需要联系管理员
@@ -113,7 +116,7 @@ func (h *Handler) Updated(event *shared.Event) {
 					continue
 				}
 
-				if _, err := h.client.Delete(ctx, key); err != nil {
+				if _, err := h.eDelete(key, false); err != nil {
 					h.logger.Info("delete error", err)
 					continue
 				}
@@ -124,7 +127,7 @@ func (h *Handler) Updated(event *shared.Event) {
 	} else if pod.Status.Phase == apiV1.PodRunning && !shared.IsPodContainersReady(oldPod.Status.Conditions) {
 		for _, service := range services {
 			key := filepath.Join(h.config.Prefix, service.DNSName(), strings.Replace(service.Host, ".", "-", -1))
-			if _, err := h.client.Put(ctx, key, service.DNSRecord()); err != nil {
+			if _, err := h.ePut(key, service.DNSRecord()); err != nil {
 				//添加时出现错误，需要联系管理员
 				h.logger.Info("add error", err)
 				continue
@@ -135,6 +138,60 @@ func (h *Handler) Updated(event *shared.Event) {
 	} else {
 		h.logger.Errorf("pod[%s] unknown event, need admin to handle", pod.Name)
 	}
+}
 
+func (h *Handler) eGet(key string, prefix bool, limit int64) (*clientv3.GetResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
+
+	var options []clientv3.OpOption
+	if prefix {
+		options = append(options, clientv3.WithPrefix())
+	}
+
+	options = append(options, clientv3.WithLimit(limit))
+
+	res, err := h.client.Get(ctx, key, options...)
 	cancel()
+
+	return res, h.eErrorHandling(ctx, err)
+}
+
+func (h *Handler) ePut(key, val string) (*clientv3.PutResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
+
+	res, err := h.client.Put(ctx, key, val)
+	cancel()
+
+	return res, h.eErrorHandling(ctx, err)
+}
+
+func (h *Handler) eDelete(key string, prefix bool) (*clientv3.DeleteResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
+
+	var options []clientv3.OpOption
+	if prefix {
+		options = append(options, clientv3.WithPrefix())
+	}
+
+	res, err := h.client.Delete(ctx, key, options...)
+	cancel()
+
+	return res, h.eErrorHandling(ctx, err)
+}
+
+func (h *Handler) eErrorHandling(ctx context.Context, err error) error {
+	if err != nil {
+		switch err {
+		case context.Canceled:
+			err = errors.Wrap(err, "ctx is canceled by another routine")
+		case context.DeadlineExceeded:
+			err = errors.Wrap(err, "ctx is attached with a deadline is exceeded")
+		case rpctypes.ErrEmptyKey:
+			err = errors.Wrap(err, "client-side error")
+		default:
+			err = errors.Wrap(err, "bad cluster endpoints, which are not etcd servers")
+		}
+	}
+
+	return err
 }

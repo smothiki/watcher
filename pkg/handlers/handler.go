@@ -86,9 +86,9 @@ func NewHandlersEngine() *echo.Echo {
 				)
 
 				if slice.ContainsInt([]int{http.StatusOK}, res.Status) {
-					logger.Infof(msg)
+					logger.Info(msg)
 				} else {
-					logger.Errorf(msg)
+					logger.Error(msg)
 				}
 
 				return err

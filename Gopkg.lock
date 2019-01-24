@@ -181,12 +181,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:8eb1de8112c9924d59bf1d3e5c26f5eaa2bfc2a5fcbb92dc1c2e4546d695f277"
+  digest = "1:a0cefd27d12712af4b5018dc7046f245e1e3b5760e2e848c30b171b570708f9b"
   name = "github.com/imdario/mergo"
   packages = ["."]
   pruneopts = "UT"
-  revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
-  version = "v0.3.6"
+  revision = "7c29201646fa3de8506f701213473dd407f19646"
+  version = "v0.3.7"
 
 [[projects]]
   digest = "1:3e551bbb3a7c0ab2a2bf4660e7fcad16db089fdcfbb44b0199e62838038623ea"
@@ -413,9 +413,12 @@
   revision = "dcecefd839c4193db0d35b88ec65b4c12d360ab0"
 
 [[projects]]
-  digest = "1:4f8b8e95cb44091ffd4c8583fc3540927e702398d9db82fae902759213bdf1f4"
+  digest = "1:0324f6a07ddafbb36e9260c8ec331108744e29e1df856141e7df6d5c7ce59501"
   name = "go.etcd.io/etcd"
-  packages = ["clientv3"]
+  packages = [
+    "clientv3",
+    "etcdserver/api/v3rpc/rpctypes",
+  ]
   pruneopts = "UT"
   revision = "2cf9e51d2a78003b164c2998886158e60ded1cbb"
   version = "v3.3.11"
@@ -430,11 +433,11 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
 
 [[projects]]
   branch = "master"
-  digest = "1:25c965216c188afcd5f430f65acc28d4f193c5a88e7c6c54ae876b1898f86368"
+  digest = "1:599a0860458c883212bbc3be8f034ee638224b082b2ffde271f06f098ace3af1"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -448,7 +451,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "915654e7eabcea33ae277abbecf52f0d8b7a9fdc"
+  revision = "ed066c81e75eba56dd9bd2139ade88125b855585"
 
 [[projects]]
   branch = "master"
@@ -463,14 +466,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:43cde116ff48f299eddb7e6515677e6d0a2c915854bb05a333877f07c3bb3033"
+  digest = "1:bb644db32f5bc1e327a0f748ec871edc4dc46f19b4fbbc15bfd95b1460646537"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "11f53e03133963fb11ae0588e08b5e0b85be8be5"
+  revision = "c6b37f3e92850b723493d63fd35aad34e19e048d"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
@@ -525,7 +528,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "db91494dd46c1fdcbbde05e5ff5eb56df8f7d79a"
+  revision = "8819c946db4494a2259bf100a377f51aa585d893"
 
 [[projects]]
   digest = "1:6dfe7f3314a390dc9e21368dd41236169bf40ae69674f42b7bd45db537751a94"
@@ -670,7 +673,7 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
-  revision = "fa6ddc151d63306b3540a37d910a07b181e4a474"
+  revision = "d41becfba9ee9bf8e55cec1dd3934cd7cfc04b99"
 
 [[projects]]
   digest = "1:acd4862e2716cf9bf50726271c859981c76833844e70af904327fd37ab2097b6"
@@ -771,6 +774,7 @@
     "github.com/srelab/common/slice",
     "github.com/urfave/cli",
     "go.etcd.io/etcd/clientv3",
+    "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes",
     "k8s.io/api/apps/v1",
     "k8s.io/api/apps/v1beta1",
     "k8s.io/api/batch/v1",

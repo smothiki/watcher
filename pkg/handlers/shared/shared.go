@@ -76,6 +76,10 @@ func (r Responder) JSON(ctx echo.Context) error {
 		r.Msg = http.StatusText(r.Status)
 	}
 
+	if err, ok := r.Msg.(error); ok {
+		r.Msg = err.Error()
+	}
+
 	return ctx.JSON(r.Status, r)
 }
 
