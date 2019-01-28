@@ -2,11 +2,10 @@ package etcd
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo"
+	"github.com/srelab/common/slice"
 	"github.com/srelab/watcher/pkg/handlers/shared"
 )
 
@@ -18,10 +17,11 @@ import (
 // Prefix && limit: This parameter is obtained from querystring when the request method is Get or Delete,
 // otherwise it is obtained from request body
 type Payload struct {
-	Key    string                 `validate:"required"`
-	Value  map[string]interface{} `json:"value" query:"value" validate:"-"`
-	Prefix bool                   `json:"prefix" query:"prefix" validate:"-"`
-	Limit  int64                  `json:"limit" query:"limit" validate:"-"`
+	Key      string
+	KeysOnly bool                   `json:"keys_only" query:"keys_only"`
+	Value    map[string]interface{} `json:"value" query:"value"`
+	Prefix   bool                   `json:"prefix" query:"prefix"`
+	Limit    int64                  `json:"limit" query:"limit"`
 }
 
 // kv data type, standard json format
@@ -32,12 +32,14 @@ func (h *Handler) AddRoutes(group *echo.Group) *echo.Group {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx echo.Context) error {
 				var payload = new(Payload)
-				payload.Key = strings.TrimLeft(ctx.Param("*"), "/")
-				if payload.Key != "" {
-					payload.Key = "/" + payload.Key
-				}
+				payload.Key = ctx.Param("*")
 
 				if err := ctx.Bind(payload); err != nil {
+					return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
+				}
+
+				if ctx.Request().Method != "GET" && slice.ContainsString([]string{"/", ""}, payload.Key) {
+					err := "invalid etcd key"
 					return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 				}
 
@@ -48,9 +50,9 @@ func (h *Handler) AddRoutes(group *echo.Group) *echo.Group {
 	}())
 
 	group.GET("", h.getName)
-	group.GET("/keys/*", h.getKey)
-	group.PUT("/keys/*", h.putKey)
-	group.DELETE("/keys/*", h.delKey)
+	group.GET("/keys*", h.getKey)
+	group.PUT("/keys*", h.putKey)
+	group.DELETE("/keys*", h.delKey)
 	return group
 }
 
@@ -62,7 +64,7 @@ func (h *Handler) getName(ctx echo.Context) error {
 func (h *Handler) getKey(ctx echo.Context) error {
 	payload, _ := ctx.Get("payload").(*Payload)
 
-	res, err := h.eGet(payload.Key, payload.Prefix, payload.Limit)
+	res, err := h.eGet(payload.Key, payload.KeysOnly, payload.Prefix, payload.Limit)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -72,11 +74,11 @@ func (h *Handler) getKey(ctx echo.Context) error {
 		kv := kvmap{}
 		value := new(kvmap)
 
+		kv["key"] = string(ev.Key)
 		if err := json.Unmarshal(ev.Value, value); err != nil {
-			fmt.Println(err)
-			kv[string(ev.Key)] = ev.Value
+			kv["value"] = ev.Value
 		} else {
-			kv[string(ev.Key)] = value
+			kv["value"] = value
 		}
 
 		kv["mod_revision"] = ev.ModRevision
@@ -86,7 +88,8 @@ func (h *Handler) getKey(ctx echo.Context) error {
 		kvs = append(kvs, kv)
 	}
 
-	result := map[string]interface{}{"count": res.Count, "kvs": kvs}
+	// more indicates if there are more keys to return in the requested range.
+	result := map[string]interface{}{"count": res.Count, "kvs": kvs, "more": res.More}
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: result}.JSON(ctx)
 }
 

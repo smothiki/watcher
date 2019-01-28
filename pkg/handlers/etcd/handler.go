@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -62,7 +61,6 @@ func (h *Handler) Init(config *g.Configuration) error {
 	h.client = client
 	h.logger = log.With("handlers", h.Name())
 
-	fmt.Println(h.eGet("/skydns", true, 1))
 	return nil
 }
 
@@ -103,7 +101,7 @@ func (h *Handler) Updated(event *shared.Event) {
 
 	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
 		for _, service := range services {
-			res, err := h.eGet(filepath.Join(h.config.Prefix, service.DNSName()), true, 0)
+			res, err := h.eGet(filepath.Join(h.config.Prefix, service.DNSName()), false, true, 0)
 			if err != nil {
 				h.logger.Info("get error", err)
 				// 获取 Key 出现错误，需要联系管理员
@@ -140,12 +138,16 @@ func (h *Handler) Updated(event *shared.Event) {
 	}
 }
 
-func (h *Handler) eGet(key string, prefix bool, limit int64) (*clientv3.GetResponse, error) {
+func (h *Handler) eGet(key string, keysOnly, prefix bool, limit int64) (*clientv3.GetResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
 
 	var options []clientv3.OpOption
 	if prefix {
 		options = append(options, clientv3.WithPrefix())
+	}
+
+	if keysOnly {
+		options = append(options, clientv3.WithKeysOnly())
 	}
 
 	options = append(options, clientv3.WithLimit(limit))
