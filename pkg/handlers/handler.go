@@ -35,7 +35,7 @@ func (v *Validator) Validate(i interface{}) error {
 // Implement the bind method to verify the request's struct for parameter validation
 type BinderWithValidation struct{}
 
-func (b BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
+func (BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
 	binder := &echo.DefaultBinder{}
 
 	var body []byte
