@@ -1,13 +1,13 @@
 package k8s
 
-type optionsPayload struct {
+type getOptionsPayload struct {
 	Limit         int64  `query:"limit"`
 	Continue      string `query:"continue"`
 	FieldSelector string `query:"field_selector" validate:"k8s_selector"`
 	LabelSelector string `query:"label_selector" validate:"k8s_selector"`
 }
 
-type deleteDeploymentPayload struct {
+type deleteOptionsPayload struct {
 	Name string `json:"name"`
 	// Whether and how garbage collection will be performed.
 	// Either this field or OrphanDependents may be set, but not both.

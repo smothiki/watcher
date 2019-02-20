@@ -15,7 +15,7 @@ import (
 // List objects of kind Deployment
 // The control list content can be filtered by the options payload.
 func (h *Handler) getDeployment(ctx echo.Context) error {
-	var p = new(optionsPayload)
+	var p = new(getOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -37,14 +37,12 @@ func (h *Handler) getDeployment(ctx echo.Context) error {
 // Create a Deployment
 // The request needs to include a legal deployment configuration file, except that it is in json format.
 func (h *Handler) createDeployment(ctx echo.Context) error {
-	namespace := ctx.Param("namespace")
-
 	deployment := new(appsV1.Deployment)
 	if err := ctx.Bind(deployment); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	deployment, err := h.k8s.client.AppsV1().Deployments(namespace).Create(deployment)
+	deployment, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Create(deployment)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -55,14 +53,12 @@ func (h *Handler) createDeployment(ctx echo.Context) error {
 // Update a Deployment
 // The request needs to include a legal deployment configuration file, except that it is in json format.
 func (h *Handler) updateDeployment(ctx echo.Context) error {
-	namespace := ctx.Param("namespace")
-
 	deployment := new(appsV1.Deployment)
 	if err := ctx.Bind(deployment); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	deployment, err := h.k8s.client.AppsV1().Deployments(namespace).Update(deployment)
+	deployment, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Update(deployment)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -75,9 +71,7 @@ func (h *Handler) updateDeployment(ctx echo.Context) error {
 // The interface supports delete_policy to control the deletion mechanism.
 // Unless you know how to use it, you should use the default value.
 func (h *Handler) deleteDeployment(ctx echo.Context) error {
-	namespace := ctx.Param("namespace")
-
-	p := new(deleteDeploymentPayload)
+	p := new(deleteOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -94,7 +88,7 @@ func (h *Handler) deleteDeployment(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.AppsV1().Deployments(namespace).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})

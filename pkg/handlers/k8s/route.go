@@ -14,12 +14,16 @@ func (h *Handler) AddRoutes(group *echo.Group) {
 	nsGroup := group.Group("/namespaces")
 	nsGroup.GET("", h.getNamespaces)
 
-	nsPodGroup := group.Group("/:ns/pods")
+	nsPodGroup := nsGroup.Group("/:ns/pods")
 	nsPodGroup.GET("", h.getPods)
+	nsPodGroup.POST("", h.createPod)
+	nsPodGroup.PUT("", h.updatePod)
+	nsPodGroup.DELETE("", h.deletePod)
 
 	nsDeploymentGroup := nsGroup.Group("/:ns/deployments")
 	nsDeploymentGroup.GET("", h.getDeployment)
 	nsDeploymentGroup.POST("", h.createDeployment)
+	nsDeploymentGroup.PUT("", h.updateDeployment)
 	nsDeploymentGroup.DELETE("", h.deleteDeployment)
 
 	nsDeploymentGroup.GET("/:name/scale", h.getDeploymentScale)
