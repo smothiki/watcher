@@ -26,6 +26,10 @@ func (h *Handler) Name() string {
 	return "gateway"
 }
 
+func (h *Handler) RoutePrefix() string {
+	return "/" + h.Name()
+}
+
 // initialize the gateway handler
 // it will be responsible for handling kube events, regsiter and unregsiter pods
 func (h *Handler) Init(config *g.Configuration) error {

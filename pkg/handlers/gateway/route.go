@@ -7,9 +7,8 @@ import (
 	"github.com/srelab/watcher/pkg/handlers/shared"
 )
 
-func (h *Handler) AddRoutes(group *echo.Group) *echo.Group {
+func (h *Handler) AddRoutes(group *echo.Group) {
 	group.GET("", h.getName)
-	return group
 }
 
 func (h *Handler) getName(ctx echo.Context) error {

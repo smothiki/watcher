@@ -24,6 +24,7 @@ import (
 // The Handle method is used to process event
 type Handler interface {
 	Name() string
+	RoutePrefix() string
 
 	Init(config *g.Configuration) error
 	Created(event *Event)
@@ -248,7 +249,7 @@ func IsPodContainersReady(conditions []apiV1.PodCondition) bool {
 //	switch object := obj.(type) {
 //	case *extV1Beta1.DaemonSet:
 //		kind = "daemon set"
-//	case *appsV1Beta1.Deployment:
+//	case *appsV1.Deployment:
 //		kind = "deployment"
 //	case *batchV1.Job:
 //		kind = "job"

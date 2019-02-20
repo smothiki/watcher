@@ -12,6 +12,10 @@ func (h *Handler) Name() string {
 	return "sa"
 }
 
+func (h *Handler) RoutePrefix() string {
+	return "/" + h.Name()
+}
+
 func (h *Handler) Init(config *g.Configuration) error {
 	return nil
 }

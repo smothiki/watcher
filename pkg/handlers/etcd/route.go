@@ -16,7 +16,7 @@ import (
 // Value: from Request Body, only used in the put method
 // Prefix && limit: This parameter is obtained from querystring when the request method is Get or Delete,
 // otherwise it is obtained from request body
-type Payload struct {
+type payload struct {
 	Key      string
 	KeysOnly bool                   `json:"keys_only" query:"keys_only"`
 	Value    map[string]interface{} `json:"value" query:"value"`
@@ -27,23 +27,23 @@ type Payload struct {
 // kv data type, standard json format
 type kvmap map[string]interface{}
 
-func (h *Handler) AddRoutes(group *echo.Group) *echo.Group {
+func (h *Handler) AddRoutes(group *echo.Group) {
 	group.Use(func() echo.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx echo.Context) error {
-				var payload = new(Payload)
-				payload.Key = ctx.Param("*")
+				var p = new(payload)
+				p.Key = ctx.Param("*")
 
-				if err := ctx.Bind(payload); err != nil {
+				if err := ctx.Bind(p); err != nil {
 					return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 				}
 
-				if ctx.Request().Method != "GET" && slice.ContainsString([]string{"/", ""}, payload.Key) {
+				if ctx.Request().Method != "GET" && slice.ContainsString([]string{"/", ""}, p.Key) {
 					err := "invalid etcd key"
 					return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 				}
 
-				ctx.Set("payload", payload)
+				ctx.Set("payload", p)
 				return next(ctx)
 			}
 		}
@@ -53,7 +53,6 @@ func (h *Handler) AddRoutes(group *echo.Group) *echo.Group {
 	group.GET("/keys*", h.getKey)
 	group.PUT("/keys*", h.putKey)
 	group.DELETE("/keys*", h.delKey)
-	return group
 }
 
 func (h *Handler) getName(ctx echo.Context) error {
@@ -62,9 +61,9 @@ func (h *Handler) getName(ctx echo.Context) error {
 
 // Get the key list via payload
 func (h *Handler) getKey(ctx echo.Context) error {
-	payload, _ := ctx.Get("payload").(*Payload)
+	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.eGet(payload.Key, payload.KeysOnly, payload.Prefix, payload.Limit)
+	res, err := h.eGet(p.Key, p.KeysOnly, p.Prefix, p.Limit)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -95,13 +94,13 @@ func (h *Handler) getKey(ctx echo.Context) error {
 
 // Update key by payload
 func (h *Handler) putKey(ctx echo.Context) error {
-	payload, _ := ctx.Get("payload").(*Payload)
+	p, _ := ctx.Get("payload").(*payload)
 
 	// always convert the request value to json
-	value, _ := json.Marshal(payload.Value)
+	value, _ := json.Marshal(p.Value)
 
 	// store json
-	_, err := h.ePut(payload.Key, string(value))
+	_, err := h.ePut(p.Key, string(value))
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -111,9 +110,9 @@ func (h *Handler) putKey(ctx echo.Context) error {
 
 // Delete key by payload
 func (h *Handler) delKey(ctx echo.Context) error {
-	payload, _ := ctx.Get("payload").(*Payload)
+	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.eDelete(payload.Key, payload.Prefix)
+	res, err := h.eDelete(p.Key, p.Prefix)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}

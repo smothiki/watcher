@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/srelab/watcher/pkg/handlers/shared"
 
@@ -32,8 +35,18 @@ func (v *Validator) Validate(i interface{}) error {
 // Implement the bind method to verify the request's struct for parameter validation
 type BinderWithValidation struct{}
 
-func (BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
+func (b BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
 	binder := &echo.DefaultBinder{}
+
+	var body []byte
+	if ctx.Request().Body != nil {
+		body, _ = ioutil.ReadAll(ctx.Request().Body)
+	}
+
+	// NopCloser returns a ReadCloser with a no-op Close method wrapping the provided Reader r.
+	// Enables ctx to bind request data multiple times
+	// TODO: When there is a performance hazard in the future, you can consider parameterizing it.
+	ctx.Request().Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 	if err := binder.Bind(i, ctx); err != nil {
 		return errors.New(err.(*echo.HTTPError).Message.(string))
@@ -53,6 +66,7 @@ func (BinderWithValidation) Bind(i interface{}, ctx echo.Context) error {
 		return errors.New(buf.String())
 	}
 
+	ctx.Request().Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	return nil
 }
 
@@ -111,16 +125,20 @@ func NewHandlersEngine() *echo.Echo {
 		})
 
 		_ = v.RegisterValidation("in", func(fl validator.FieldLevel) bool {
-			values := strings.Split(fl.Param(), ";")
-			fieldValue := fmt.Sprintf("%v", fl.Field())
-
-			for _, value := range values {
-				if value == fieldValue {
-					return true
-				}
+			value := fl.Field().String()
+			if slice.ContainsString(strings.Split(fl.Param(), ";"), value) || value == "" {
+				return true
 			}
 
 			return false
+		})
+
+		_ = v.RegisterValidation("k8s_selector", func(fl validator.FieldLevel) bool {
+			if _, err := fields.ParseSelector(fl.Field().String()); err != nil {
+				return false
+			}
+
+			return true
 		})
 
 		return &Validator{validate: v}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/srelab/watcher/pkg/handlers/etcd"
 	"github.com/srelab/watcher/pkg/handlers/gateway"
-	"github.com/srelab/watcher/pkg/handlers/public"
+	"github.com/srelab/watcher/pkg/handlers/k8s"
 	"github.com/srelab/watcher/pkg/handlers/sa"
 	"github.com/srelab/watcher/pkg/handlers/shared"
 
@@ -19,7 +19,7 @@ import (
 
 	"github.com/srelab/watcher/pkg/handlers"
 
-	appsV1Beta1 "k8s.io/api/apps/v1beta1"
+	appsV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	apiV1 "k8s.io/api/core/v1"
 	extV1Beta1 "k8s.io/api/extensions/v1beta1"
@@ -44,13 +44,13 @@ func Start() {
 		kubeClient = GetClient()
 	}
 
-	var publicHandler = new(public.Handler)
+	var k8sHandler = new(k8s.Handler)
 	var saHandler = new(sa.Handler)
 	var gatewayHandler = new(gateway.Handler)
 	var etcdHandler = new(etcd.Handler)
 
 	// initialize all handler
-	if err := publicHandler.Init(g.Config()); err != nil {
+	if err := k8sHandler.Init(g.Config(), kubeClient); err != nil {
 		log.Panic("init default handler error: ", err)
 	}
 
@@ -162,13 +162,13 @@ func Start() {
 		informer := cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options metaV1.ListOptions) (runtime.Object, error) {
-					return kubeClient.AppsV1beta1().Deployments(g.Config().Kubernetes.Namespace).List(options)
+					return kubeClient.AppsV1().Deployments(g.Config().Kubernetes.Namespace).List(options)
 				},
 				WatchFunc: func(options metaV1.ListOptions) (watch.Interface, error) {
-					return kubeClient.AppsV1beta1().Deployments(g.Config().Kubernetes.Namespace).Watch(options)
+					return kubeClient.AppsV1().Deployments(g.Config().Kubernetes.Namespace).Watch(options)
 				},
 			},
-			&appsV1Beta1.Deployment{},
+			&appsV1.Deployment{},
 			0, //Skip resync
 			cache.Indexers{},
 		)
@@ -339,8 +339,9 @@ func Start() {
 
 	// Selectively add routes when some handler need to expose the interface
 	handlersRoute := engine.Group("/handlers")
-	etcdHandler.AddRoutes(handlersRoute.Group("/etcd"))
-	gatewayHandler.AddRoutes(handlersRoute.Group("/gateway"))
+	etcdHandler.AddRoutes(handlersRoute.Group(etcdHandler.RoutePrefix()))
+	gatewayHandler.AddRoutes(handlersRoute.Group(gatewayHandler.RoutePrefix()))
+	k8sHandler.AddRoutes(handlersRoute.Group(k8sHandler.RoutePrefix()))
 
 	go engine.Start(g.Config().Http.GetListenAddr())
 

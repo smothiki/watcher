@@ -28,6 +28,10 @@ func (h *Handler) Name() string {
 	return "etcd"
 }
 
+func (h *Handler) RoutePrefix() string {
+	return "/" + h.Name()
+}
+
 func (h *Handler) Init(config *g.Configuration) error {
 	h.config = config.Handlers.EtcdConfig
 	h.config.Prefix = strings.TrimRight(h.config.Prefix, "/")
