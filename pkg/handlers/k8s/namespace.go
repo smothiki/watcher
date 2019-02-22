@@ -5,19 +5,20 @@ import (
 
 	"github.com/labstack/echo"
 	"github.com/srelab/watcher/pkg/handlers/shared"
+
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// List objects of kind Pod
+// List objects of kind Namespace
 // The control list content can be filtered by the options payload.
-func (h *Handler) getPod(ctx echo.Context) error {
+func (h *Handler) getNamespace(ctx echo.Context) error {
 	var p = new(getOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pods, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).List(metaV1.ListOptions{
+	namespaces, err := h.k8s.client.CoreV1().Namespaces().List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -28,53 +29,49 @@ func (h *Handler) getPod(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	return shared.Responder{Status: http.StatusOK, Success: true, Result: pods}.JSON(ctx)
+	return shared.Responder{Status: http.StatusOK, Success: true, Result: namespaces}.JSON(ctx)
 }
 
-// Create a Pod
-// The request needs to include a legal pod configuration file, except that it is in json format.
-func (h *Handler) createPod(ctx echo.Context) error {
-	pod := new(coreV1.Pod)
-	if err := ctx.Bind(pod); err != nil {
+// Create a Namespace
+// The request needs to include a legal namespace configuration file, except that it is in json format.
+func (h *Handler) createNamespace(ctx echo.Context) error {
+	namespace := new(coreV1.Namespace)
+	if err := ctx.Bind(namespace); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pod, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Create(pod)
-
+	namespace, err := h.k8s.client.CoreV1().Namespaces().Create(namespace)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	return shared.Responder{Status: http.StatusOK, Success: true, Result: pod}.JSON(ctx)
+	return shared.Responder{Status: http.StatusOK, Success: true, Result: namespace}.JSON(ctx)
 }
 
-// Update a Pod
-// The request needs to include a legal Pod configuration file, except that it is in json format.
-// If the Pod needs to perform an update operation, at least ensure that the following attributes are present:
-// metadata.name, metadata.resourceVersion  (the server will check for the latest) , metadata.labels
-// spec.volumes, spec.containers, spec.serviceAccount, spec.nodeName
-//
-// It is recommended to always modify the submission based on the current latest pod config
-func (h *Handler) updatePod(ctx echo.Context) error {
-	pod := new(coreV1.Pod)
-	if err := ctx.Bind(pod); err != nil {
+// Update a Namespace
+// The request needs to include a legal namespace configuration file, except that it is in json format.
+// When the namespace is updated, only the state can be updated. Their values are:
+//     "Active" means the namespace is available for use in the system
+//     "Terminating" means the namespace is undergoing graceful termination
+func (h *Handler) updateNamespace(ctx echo.Context) error {
+	namespace := new(coreV1.Namespace)
+	if err := ctx.Bind(namespace); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pod, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Update(pod)
-
+	namespace, err := h.k8s.client.CoreV1().Namespaces().Update(namespace)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	return shared.Responder{Status: http.StatusOK, Success: true, Result: pod}.JSON(ctx)
+	return shared.Responder{Status: http.StatusOK, Success: true, Result: namespace}.JSON(ctx)
 }
 
-// Delete a Pod
-// It is deleted by the name of the Pod.
+// Delete a Namespace
+// It is deleted by the name of the namespace.
 // The interface supports delete_policy to control the deletion mechanism.
 // Unless you know how to use it, you should use the default value.
-func (h *Handler) deletePod(ctx echo.Context) error {
+func (h *Handler) deleteNamespace(ctx echo.Context) error {
 	p := new(deleteOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
@@ -92,7 +89,7 @@ func (h *Handler) deletePod(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.k8s.client.CoreV1().Namespaces().Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})
