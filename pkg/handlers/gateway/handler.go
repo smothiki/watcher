@@ -125,7 +125,7 @@ func (h *Handler) Updated(event *shared.Event) {
 		fmt.Println(string(j))
 		fmt.Println(string(oj))
 
-		h.logger.Errorf("pod[%s] unknown event, need a-e", pod.Name)
+		h.logger.Errorf("pod[%s] unknown event, need admin", pod.Name)
 	}
 }
 

@@ -25,6 +25,12 @@ func (h *Handler) AddRoutes(group *echo.Group) {
 	nsPodGroup.PUT("", h.updatePod)
 	nsPodGroup.DELETE("", h.deletePod)
 
+	nsSecretGroup := nsGroup.Group("/:ns/secrets")
+	nsSecretGroup.GET("", h.getSecret)
+	nsSecretGroup.POST("", h.createSecret)
+	nsSecretGroup.PUT("", h.updateSecret)
+	nsSecretGroup.DELETE("", h.deleteSecret)
+
 	nsDaemonsetGroup := nsGroup.Group("/:ns/daemonsets")
 	nsDaemonsetGroup.GET("", h.getDaemonset)
 	nsDaemonsetGroup.POST("", h.createDaemonSet)
