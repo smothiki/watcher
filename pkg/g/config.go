@@ -50,7 +50,7 @@ type EtcdConfig struct {
 	KeyFile   string        `mapstructure:"KeyFile"`
 	CAFile    string        `mapstructure:"CAFile"`
 	Timeout   time.Duration `mapstructure:"Timeout"`
-	Prefix    string        `mapstructure:"Prefix"`
+	DNSPrefix string        `mapstructure:"DNSPrefix"`
 	Endpoints []string      `mapstructure:"Endpoints"`
 }
 

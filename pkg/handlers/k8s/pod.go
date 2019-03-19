@@ -17,7 +17,7 @@ func (h *Handler) getPod(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pods, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).List(metaV1.ListOptions{
+	pods, err := h.handlers.kube.CoreV1().Pods(ctx.Param("ns")).List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -39,7 +39,7 @@ func (h *Handler) createPod(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pod, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Create(pod)
+	pod, err := h.handlers.kube.CoreV1().Pods(ctx.Param("ns")).Create(pod)
 
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
@@ -61,7 +61,7 @@ func (h *Handler) updatePod(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	pod, err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Update(pod)
+	pod, err := h.handlers.kube.CoreV1().Pods(ctx.Param("ns")).Update(pod)
 
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
@@ -92,7 +92,7 @@ func (h *Handler) deletePod(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.CoreV1().Pods(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.handlers.kube.CoreV1().Pods(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})

@@ -17,7 +17,7 @@ func (h *Handler) getNode(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	namespaces, err := h.k8s.client.CoreV1().Nodes().List(metaV1.ListOptions{
+	namespaces, err := h.handlers.kube.CoreV1().Nodes().List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,

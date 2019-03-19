@@ -1,20 +1,15 @@
 package gateway
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/srelab/watcher/pkg/handlers/shared"
-
 	"git.srelab.cn/go/resty"
-
-	apiV1 "k8s.io/api/core/v1"
 
 	"github.com/srelab/common/log"
 	"github.com/srelab/watcher/pkg/g"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 )
 
 type Handler struct {
@@ -22,119 +17,32 @@ type Handler struct {
 	configs []g.GatewayConfig
 }
 
-func (h *Handler) Name() string {
-	return "gateway"
-}
-
-func (h *Handler) RoutePrefix() string {
-	return "/" + h.Name()
-}
+func (h *Handler) Name() string            { return "gateway" }
+func (h *Handler) Handler() *Handler       { return h }
+func (h *Handler) RoutePrefix() string     { return "/" + h.Name() }
+func (h *Handler) Created(e *shared.Event) {}
+func (h *Handler) Deleted(e *shared.Event) {}
+func (h *Handler) Updated(e *shared.Event) {}
 
 // initialize the gateway handler
 // it will be responsible for handling kube events, regsiter and unregsiter pods
-func (h *Handler) Init(config *g.Configuration) error {
+func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
 	h.configs = config.Handlers.GatewayConfigs
 	h.logger = log.With("handlers", h.Name())
 
 	return nil
 }
 
-// handling the created event,
-// since the kube only generates the created event when a new `deployment` is created,
-// only the log is output here.
-func (h *Handler) Created(e *shared.Event) {
-	if e.ResourceType != shared.ResourceTypePod {
-		h.logger.Debug("invalid resource type, skipped")
-		return
-	}
-
-	pod := e.Object.(*apiV1.Pod)
-	h.logger.Debugf("pod[%s] did not do anything when created, skipped", pod.Name)
-}
-
-func (h *Handler) Deleted(e *shared.Event) {
-	if e.ResourceType != shared.ResourceTypePod {
-		h.logger.Debug("invalid resource type, skipped")
-		return
-	}
-
-	pod := e.Object.(*apiV1.Pod)
-	h.logger.Debugf("pod[%s] did not do anything when deleted, skipped", pod.Name)
-}
-
-func (h *Handler) Updated(event *shared.Event) {
-	// Convert the associated object in the event to pod
-	pod, oldPod := event.Object.(*apiV1.Pod), event.OldObject.(*apiV1.Pod)
-
-	// Get all valid services from the pod
-	services, err := event.GetPodServices(pod)
-	if err != nil {
-		h.logger.Debug(err)
-		return
-	}
-
-	if pod.GetDeletionTimestamp() != nil && oldPod.Status.Phase == apiV1.PodRunning {
-		for _, service := range services {
-			namespace := pod.GetNamespace()
-			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/unregister", service.Name))
-			if regURL == "" {
-				h.logger.Warnf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, service.String())
-				continue
-			}
-
-			res, err := h.getRequest().SetBody(service).Post(regURL)
-			if err != nil {
-				h.logger.Errorf("pod[%s] - [%s] unregister error: %s", pod.Name, res.String(), err)
-				continue
-			}
-
-			if res.StatusCode() != http.StatusOK {
-				h.logger.Errorf("pod[%s] - [%s] unregister error: %d", pod.Name, res.String(), res.StatusCode())
-				continue
-			}
-
-			h.logger.Infof("pod[%s] - [%s] unregister successful", pod.Name, service.String())
-		}
-	} else if pod.Status.Phase == apiV1.PodRunning && !shared.IsPodContainersReady(oldPod.Status.Conditions) {
-		for _, service := range services {
-			namespace := pod.GetNamespace()
-
-			// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
-			regURL := h.getURL(namespace, fmt.Sprintf("/upstreams/%s/register", service.Name))
-			if regURL == "" {
-				h.logger.Warnf("namespace `%s` has no associated gateway config, pod[%s] register skipped", namespace, service.String())
-				continue
-			}
-
-			res, err := h.getRequest().SetBody(service).Post(regURL)
-			if err != nil {
-				h.logger.Errorf("pod[%s] - [%s] register error: %s", pod.Name, res.String(), err)
-				continue
-			}
-
-			if res.StatusCode() != http.StatusOK {
-				h.logger.Errorf("pod[%s] - [%s] register error: %d", pod.Name, res.String(), res.StatusCode())
-				continue
-			}
-
-			h.logger.Infof("pod[%s] - [%s] register successful", pod.Name, service.String())
-		}
-	} else {
-		j, _ := json.Marshal(pod)
-		oj, _ := json.Marshal(oldPod)
-		fmt.Println(string(j))
-		fmt.Println(string(oj))
-
-		h.logger.Errorf("pod[%s] unknown event, need admin", pod.Name)
-	}
-}
-
-func (h *Handler) getRequest() *resty.Request {
+// Return request client , default 5 seconds timeout and automatically retry
+func (h *Handler) Request() *resty.Request {
 	r := resty.New().SetRetryCount(3).SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(10 * time.Second)
 	return r.R().SetHeader("Content-Type", "application/json")
 }
 
-func (h *Handler) getURL(namespace, path string) string {
+// Returns the interface address of the gateway
+// namespace: kubernetes namespace
+// path: request path
+func (h *Handler) URL(namespace, path string) string {
 	for _, config := range h.configs {
 		if config.Namespace == namespace {
 			return fmt.Sprintf("http://%s:%s/%s", config.Host, config.Port, strings.TrimLeft(path, "/"))

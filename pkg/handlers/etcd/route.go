@@ -22,6 +22,7 @@ type payload struct {
 	Value    map[string]interface{} `json:"value" query:"value"`
 	Prefix   bool                   `json:"prefix" query:"prefix"`
 	Limit    int64                  `json:"limit" query:"limit"`
+	Expire   int64                  `json:"expire" query:"-"`
 }
 
 // kv data type, standard json format
@@ -63,7 +64,7 @@ func (h *Handler) getName(ctx echo.Context) error {
 func (h *Handler) getKey(ctx echo.Context) error {
 	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.eGet(p.Key, p.KeysOnly, p.Prefix, p.Limit)
+	res, err := h.GetKey(p.Key, p.KeysOnly, p.Prefix, p.Limit)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -88,8 +89,9 @@ func (h *Handler) getKey(ctx echo.Context) error {
 	}
 
 	// more indicates if there are more keys to return in the requested range.
-	result := map[string]interface{}{"count": res.Count, "kvs": kvs, "more": res.More}
-	return shared.Responder{Status: http.StatusOK, Success: true, Result: result}.JSON(ctx)
+	return shared.Responder{Status: http.StatusOK, Success: true, Result: map[string]interface{}{
+		"count": res.Count, "kvs": kvs, "more": res.More,
+	}}.JSON(ctx)
 }
 
 // Update key by payload
@@ -100,7 +102,7 @@ func (h *Handler) putKey(ctx echo.Context) error {
 	value, _ := json.Marshal(p.Value)
 
 	// store json
-	_, err := h.ePut(p.Key, string(value))
+	_, err := h.PutKey(p.Key, string(value), p.Expire)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -112,7 +114,7 @@ func (h *Handler) putKey(ctx echo.Context) error {
 func (h *Handler) delKey(ctx echo.Context) error {
 	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.eDelete(p.Key, p.Prefix)
+	res, err := h.DeleteKey(p.Key, p.Prefix)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}

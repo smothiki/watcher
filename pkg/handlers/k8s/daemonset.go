@@ -18,7 +18,7 @@ func (h *Handler) getDaemonset(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	daemonsets, err := h.k8s.client.AppsV1().DaemonSets(ctx.Param("ns")).List(metaV1.ListOptions{
+	daemonsets, err := h.handlers.kube.AppsV1().DaemonSets(ctx.Param("ns")).List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -40,7 +40,7 @@ func (h *Handler) createDaemonSet(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	daemonset, err := h.k8s.client.AppsV1().DaemonSets(ctx.Param("ns")).Create(daemonset)
+	daemonset, err := h.handlers.kube.AppsV1().DaemonSets(ctx.Param("ns")).Create(daemonset)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -56,7 +56,7 @@ func (h *Handler) updateDaemonset(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	daemonset, err := h.k8s.client.AppsV1().DaemonSets(ctx.Param("ns")).Update(daemonset)
+	daemonset, err := h.handlers.kube.AppsV1().DaemonSets(ctx.Param("ns")).Update(daemonset)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -86,7 +86,7 @@ func (h *Handler) deleteDaemonset(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.AppsV1().DaemonSets(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.handlers.kube.AppsV1().DaemonSets(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})

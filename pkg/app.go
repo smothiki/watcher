@@ -7,17 +7,19 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/labstack/echo"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/srelab/common/log"
+	"github.com/srelab/watcher/pkg/controller"
+	"github.com/srelab/watcher/pkg/g"
+	"github.com/srelab/watcher/pkg/handlers"
+	"github.com/srelab/watcher/pkg/handlers/core"
 	"github.com/srelab/watcher/pkg/handlers/etcd"
 	"github.com/srelab/watcher/pkg/handlers/gateway"
 	"github.com/srelab/watcher/pkg/handlers/k8s"
 	"github.com/srelab/watcher/pkg/handlers/sa"
 	"github.com/srelab/watcher/pkg/handlers/shared"
-
-	"github.com/srelab/common/log"
-
-	"github.com/srelab/watcher/pkg/handlers"
 
 	appsV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
@@ -25,13 +27,12 @@ import (
 	extV1Beta1 "k8s.io/api/extensions/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/srelab/watcher/pkg/controller"
-	"github.com/srelab/watcher/pkg/g"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func Start() {
@@ -45,17 +46,15 @@ func Start() {
 	}
 
 	var k8sHandler = new(k8s.Handler)
-	var saHandler = new(sa.Handler)
 	var gatewayHandler = new(gateway.Handler)
 	var etcdHandler = new(etcd.Handler)
+
+	var saHandler = new(sa.Handler)
+	var coreHandler = new(core.Handler)
 
 	// initialize all handler
 	if err := k8sHandler.Init(g.Config(), kubeClient); err != nil {
 		log.Panic("init default handler error: ", err)
-	}
-
-	if err := saHandler.Init(g.Config()); err != nil {
-		log.Panic("init sa handler error: ", err)
 	}
 
 	if err := gatewayHandler.Init(g.Config()); err != nil {
@@ -66,10 +65,19 @@ func Start() {
 		log.Panic("init etcd handler error: ", err)
 	}
 
+	if err := saHandler.Init(g.Config(), etcdHandler); err != nil {
+		log.Panic("init sa handler error: ", err)
+	}
+
+	if err := coreHandler.Init(g.Config(), etcdHandler, gatewayHandler); err != nil {
+		log.Panic("init core handler error: ", err)
+	}
+
 	// close the etcd client
 	// follow-up can implement public methods for the Close()
 	defer etcdHandler.Close()
 
+	informerHandlers := []shared.Handler{saHandler}
 	if g.Config().Resource.Pod {
 		informer := cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -88,7 +96,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypePod, []shared.Handler{gatewayHandler, etcdHandler, saHandler})
+		c := controller.New(kubeClient, informer, shared.ResourceTypePod, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -110,7 +118,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeDaemonSet, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeDaemonSet, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -132,7 +140,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicaSet, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicaSet, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -154,7 +162,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeService, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeService, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -176,7 +184,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeDeployment, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeDeployment, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -198,7 +206,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeNamespace, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeNamespace, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -220,7 +228,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicationController, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeReplicationController, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -242,7 +250,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeJob, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeJob, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -264,7 +272,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypePersistentVolume, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypePersistentVolume, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -286,7 +294,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeSecret, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeSecret, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -308,7 +316,7 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeConfigMap, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeConfigMap, informerHandlers)
 		go c.Run(stopCh)
 	}
 
@@ -330,18 +338,21 @@ func Start() {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
-		c := controller.New(kubeClient, informer, shared.ResourceTypeIngress, []shared.Handler{})
+		c := controller.New(kubeClient, informer, shared.ResourceTypeIngress, informerHandlers)
 		go c.Run(stopCh)
 	}
 
 	// Open the built-in handler interface as http
 	engine := handlers.NewHandlersEngine()
+	engine.Use(handlers.NewMetric())
+	engine.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	// Selectively add routes when some handler need to expose the interface
 	handlersRoute := engine.Group("/handlers")
 	etcdHandler.AddRoutes(handlersRoute.Group(etcdHandler.RoutePrefix()))
 	gatewayHandler.AddRoutes(handlersRoute.Group(gatewayHandler.RoutePrefix()))
 	k8sHandler.AddRoutes(handlersRoute.Group(k8sHandler.RoutePrefix()))
+	coreHandler.AddRoutes(handlersRoute.Group(coreHandler.RoutePrefix()))
 
 	go engine.Start(g.Config().Http.GetListenAddr())
 

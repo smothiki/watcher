@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/fields"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	"github.com/srelab/common/log"
@@ -27,6 +30,19 @@ import (
 type Validator struct {
 	validate *validator.Validate
 }
+
+// prometheus middleware config
+type PrometheusConfig struct {
+	Skipper   middleware.Skipper
+	Namespace string
+}
+
+// prometheus collector
+var (
+	promeReqQps      *prometheus.CounterVec
+	promeReqDuration *prometheus.SummaryVec
+	promeOutBytes    prometheus.Summary
+)
 
 func (v *Validator) Validate(i interface{}) error {
 	return v.validate.Struct(i)
@@ -178,4 +194,70 @@ func NewHandlersEngine() *echo.Echo {
 	}
 
 	return engine
+}
+
+// prometheus metric's middleware
+func NewMetric() echo.MiddlewareFunc {
+	config := PrometheusConfig{
+		Skipper:   middleware.DefaultSkipper,
+		Namespace: g.NAME,
+	}
+
+	initCollector(strings.ToLower(config.Namespace))
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if config.Skipper(c) {
+				return next(c)
+			}
+
+			request := c.Request()
+			response := c.Response()
+			start := time.Now()
+
+			if err := next(c); err != nil {
+				c.Error(err)
+			}
+
+			uri := request.URL.Path
+			status := strconv.Itoa(response.Status)
+			elapsed := time.Since(start).Seconds()
+			bytesOut := float64(response.Size)
+
+			promeReqQps.WithLabelValues(status, request.Method, request.Host, uri).Inc()
+			promeReqDuration.WithLabelValues(request.Method, request.Host, uri).Observe(elapsed)
+			promeOutBytes.Observe(bytesOut)
+			return nil
+		}
+	}
+}
+
+// Initialize the HTTP collector
+func initCollector(namespace string) {
+	promeReqQps = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "http_request_total",
+			Help:      "HTTP requests processed.",
+		},
+		[]string{"code", "method", "host", "url"},
+	)
+
+	promeReqDuration = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Namespace: namespace,
+			Name:      "http_request_duration_seconds",
+			Help:      "HTTP request latencies in seconds.",
+		},
+		[]string{"method", "host", "url"},
+	)
+
+	promeOutBytes = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Namespace: namespace,
+			Name:      "http_response_size_bytes",
+			Help:      "HTTP response bytes.",
+		},
+	)
+
+	prometheus.MustRegister(promeReqQps, promeReqDuration, promeOutBytes)
 }

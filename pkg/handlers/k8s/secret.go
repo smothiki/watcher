@@ -18,7 +18,7 @@ func (h *Handler) getSecret(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	secrets, err := h.k8s.client.CoreV1().Secrets(ctx.Param("ns")).List(metaV1.ListOptions{
+	secrets, err := h.handlers.kube.CoreV1().Secrets(ctx.Param("ns")).List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -40,7 +40,7 @@ func (h *Handler) createSecret(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	secret, err := h.k8s.client.CoreV1().Secrets(ctx.Param("ns")).Create(secret)
+	secret, err := h.handlers.kube.CoreV1().Secrets(ctx.Param("ns")).Create(secret)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -54,7 +54,7 @@ func (h *Handler) updateSecret(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	secret, err := h.k8s.client.CoreV1().Secrets(ctx.Param("ns")).Update(secret)
+	secret, err := h.handlers.kube.CoreV1().Secrets(ctx.Param("ns")).Update(secret)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -80,7 +80,7 @@ func (h *Handler) deleteSecret(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.CoreV1().Secrets(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.handlers.kube.CoreV1().Secrets(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})

@@ -20,7 +20,7 @@ func (h *Handler) getDeployment(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	deployments, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).List(metaV1.ListOptions{
+	deployments, err := h.handlers.kube.AppsV1().Deployments(ctx.Param("ns")).List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -42,7 +42,7 @@ func (h *Handler) createDeployment(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	deployment, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Create(deployment)
+	deployment, err := h.handlers.kube.AppsV1().Deployments(ctx.Param("ns")).Create(deployment)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -58,7 +58,7 @@ func (h *Handler) updateDeployment(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	deployment, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Update(deployment)
+	deployment, err := h.handlers.kube.AppsV1().Deployments(ctx.Param("ns")).Update(deployment)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -88,7 +88,7 @@ func (h *Handler) deleteDeployment(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.handlers.kube.AppsV1().Deployments(ctx.Param("ns")).Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})
@@ -104,7 +104,7 @@ func (h *Handler) deleteDeployment(ctx echo.Context) error {
 func (h *Handler) getDeploymentScale(ctx echo.Context) error {
 	name := ctx.Param("name")
 
-	scale, err := h.k8s.client.AppsV1().Deployments(ctx.Param("ns")).GetScale(name, metaV1.GetOptions{})
+	scale, err := h.handlers.kube.AppsV1().Deployments(ctx.Param("ns")).GetScale(name, metaV1.GetOptions{})
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -128,7 +128,7 @@ func (h *Handler) updateDeploymentScale(ctx echo.Context) error {
 		Spec: autoscalingV1.ScaleSpec{Replicas: int32(replicas)},
 	}
 
-	scale, err = h.k8s.client.AppsV1().Deployments(scale.ObjectMeta.Namespace).UpdateScale(scale.ObjectMeta.Name, scale)
+	scale, err = h.handlers.kube.AppsV1().Deployments(scale.ObjectMeta.Namespace).UpdateScale(scale.ObjectMeta.Name, scale)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}

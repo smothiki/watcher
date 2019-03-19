@@ -18,7 +18,7 @@ func (h *Handler) getNamespace(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	namespaces, err := h.k8s.client.CoreV1().Namespaces().List(metaV1.ListOptions{
+	namespaces, err := h.handlers.kube.CoreV1().Namespaces().List(metaV1.ListOptions{
 		FieldSelector: p.FieldSelector,
 		LabelSelector: p.LabelSelector,
 		Continue:      p.Continue,
@@ -40,7 +40,7 @@ func (h *Handler) createNamespace(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	namespace, err := h.k8s.client.CoreV1().Namespaces().Create(namespace)
+	namespace, err := h.handlers.kube.CoreV1().Namespaces().Create(namespace)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -59,7 +59,7 @@ func (h *Handler) updateNamespace(ctx echo.Context) error {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	namespace, err := h.k8s.client.CoreV1().Namespaces().Update(namespace)
+	namespace, err := h.handlers.kube.CoreV1().Namespaces().Update(namespace)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -89,7 +89,7 @@ func (h *Handler) deleteNamespace(ctx echo.Context) error {
 		deletePolicy = metaV1.DeletePropagationForeground
 	}
 
-	err := h.k8s.client.CoreV1().Namespaces().Delete(p.Name, &metaV1.DeleteOptions{
+	err := h.handlers.kube.CoreV1().Namespaces().Delete(p.Name, &metaV1.DeleteOptions{
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: p.GracePeriodSeconds,
 	})
