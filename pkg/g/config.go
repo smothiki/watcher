@@ -58,6 +58,7 @@ type SAConfig struct {
 	Endpoint string `mapstructure:"Endpoint"`
 	Username string `mapstructure:"Username"`
 	Password string `mapstructure:"Password"`
+	NoticeId string `mapstructure:"NoticeId"`
 }
 
 type Handlers struct {

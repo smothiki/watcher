@@ -81,7 +81,7 @@ func (h *Handler) send(content string) {
 		SetBasicAuth(h.config.Username, h.config.Password).
 		SetBody(map[string]interface{}{
 			"config": map[string]interface{}{
-				"chat_id": "16424064891450815878",
+				"chat_id": h.config.NoticeId,
 				"content": content,
 			},
 		}).Post(fmt.Sprintf("%s/api/tasks/wechat/push", h.config.Endpoint))
