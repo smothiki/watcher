@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	//
+	// harbor models
 	"github.com/goharbor/harbor/src/common/models"
 
 	"github.com/labstack/echo"
