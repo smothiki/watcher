@@ -10,6 +10,25 @@
   version = "v1.11.0"
 
 [[projects]]
+  digest = "1:f2e4b16bb90e9b9b7899623bf351df4c61c8b84eab7fe67da20e2970ee34220d"
+  name = "github.com/astaxie/beego"
+  packages = [
+    "orm",
+    "validation",
+  ]
+  pruneopts = "UT"
+  revision = "1b6edafc96ad27b6515fafeccd7339dda3e997b1"
+  version = "v1.11.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
+  name = "github.com/beorn7/perks"
+  packages = ["quantile"]
+  pruneopts = "UT"
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
   digest = "1:bd7cec1867afd4d5011757057b4d8de794b50ae3cf31304e01d069e84e09e89d"
   name = "github.com/coreos/etcd"
   packages = [
@@ -90,6 +109,19 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:abf45b709dd79e7d45478b4541de80a94075acf1e9f8aed168c1214528402caa"
+  name = "github.com/goharbor/harbor"
+  packages = [
+    "src/common",
+    "src/common/models",
+    "src/common/utils",
+    "src/common/utils/log",
+  ]
+  pruneopts = "UT"
+  revision = "ce6a623748a74f3a779749a355327bb2e80f3ff8"
+  version = "v1.7.4"
+
+[[projects]]
   branch = "master"
   digest = "1:1ba1d79f2810270045c328ae5d674321db34e3aae468eb4233883b473c5c0467"
   name = "github.com/golang/glog"
@@ -118,6 +150,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "UT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -261,6 +301,14 @@
   version = "v0.0.4"
 
 [[projects]]
+  digest = "1:ff5ebae34cfbf047d505ee150de27e60570e8c394b3b8fdbb720ff6ac71985fc"
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  packages = ["pbutil"]
+  pruneopts = "UT"
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
@@ -323,6 +371,52 @@
   pruneopts = "UT"
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
+
+[[projects]]
+  digest = "1:93a746f1060a8acbcf69344862b2ceced80f854170e1caae089b2834c5fbf7f4"
+  name = "github.com/prometheus/client_golang"
+  packages = [
+    "prometheus",
+    "prometheus/internal",
+    "prometheus/promhttp",
+  ]
+  pruneopts = "UT"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2d5cd61daa5565187e1d96bae64dbbc6080dacf741448e9629c64fd93203b0d4"
+  name = "github.com/prometheus/client_model"
+  packages = ["go"]
+  pruneopts = "UT"
+  revision = "fd36f4220a901265f90734c3183c5f0c91daa0b8"
+
+[[projects]]
+  digest = "1:35cf6bdf68db765988baa9c4f10cc5d7dda1126a54bd62e252dbcd0b1fc8da90"
+  name = "github.com/prometheus/common"
+  packages = [
+    "expfmt",
+    "internal/bitbucket.org/ww/goautoneg",
+    "model",
+  ]
+  pruneopts = "UT"
+  revision = "cfeb6f9992ffa54aaa4f2170ade4067ee478b250"
+  version = "v0.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c31163bd62461e0c5f7ddc7363e39ef8d9e929693e77b5c11c709b05f9cb9219"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "internal/util",
+    "iostats",
+    "nfs",
+    "xfs",
+  ]
+  pruneopts = "UT"
+  revision = "40f3c57fb1983891f95378042bd0bfd590f52384"
 
 [[projects]]
   digest = "1:87c2e02fb01c27060ccc5ba7c5a407cc91147726f8f40b70cceeedbc52b1f3a8"
@@ -425,11 +519,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cea8a31af44e77908c71e68561ce2e5992cf08d3ec29a3f9007f90c9b29bd001"
+  digest = "1:c0768c116720caf110b7f247eda46335d3e2514f7ee7e39a6e9d8d8ec3022ac7"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
+    "pbkdf2",
     "ssh/terminal",
   ]
   pruneopts = "UT"
@@ -766,9 +861,13 @@
     "git.srelab.cn/go/resty",
     "github.com/coreos/etcd/pkg/transport",
     "github.com/go-playground/validator",
+    "github.com/goharbor/harbor/src/common/models",
+    "github.com/google/go-querystring/query",
     "github.com/labstack/echo",
     "github.com/labstack/echo/middleware",
     "github.com/pkg/errors",
+    "github.com/prometheus/client_golang/prometheus",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/spf13/viper",
     "github.com/srelab/common/log",
     "github.com/srelab/common/slice",
@@ -776,11 +875,12 @@
     "go.etcd.io/etcd/clientv3",
     "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes",
     "k8s.io/api/apps/v1",
-    "k8s.io/api/apps/v1beta1",
+    "k8s.io/api/autoscaling/v1",
     "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/fields",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/apimachinery/pkg/util/wait",
