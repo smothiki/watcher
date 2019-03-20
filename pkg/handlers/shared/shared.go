@@ -1,9 +1,15 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
+	"strconv"
+
+	"github.com/go-playground/validator"
+	"github.com/srelab/common/log"
+	"github.com/srelab/common/slice"
 
 	appsV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
@@ -78,6 +84,76 @@ type Event struct {
 	Action       string
 	Namespace    string
 	ResourceType ResourceType
+}
+
+// Return a set of services from the pod's Containers
+// Return an empty slice when Containers is empty
+func (event *Event) GetPodServices(pod *apiV1.Pod) ([]*ServicePayload, error) {
+	if event.ResourceType != ResourceTypePod {
+		return nil, errors.New("invalid resource type, skipped")
+	}
+
+	if pod.Status.PodIP == "" {
+		return nil, fmt.Errorf("pod[%s] has not yet obtained a valid IP, skipped", pod.Name)
+	}
+
+	requireKeys := []string{
+		"SERVICE_NAME", "SERVICE_PORT", "SERVICE_PROTOCOL_TYPE",
+		"DNS_FL_DOMAIN", "HEALTH_CHECK_URL", "HEALTH_CHECK_PORT",
+	}
+
+	services := make([]*ServicePayload, 0)
+	for _, container := range pod.Spec.Containers {
+		service := new(ServicePayload)
+		if len(container.Env) < 5 {
+			continue
+		}
+
+		service.Host = pod.Status.PodIP
+		for _, env := range container.Env {
+			if !slice.ContainsString(requireKeys, env.Name) {
+				continue
+			}
+
+			switch env.Name {
+			case "SERVICE_NAME":
+				service.Name = env.Value
+			case "SERVICE_PORT":
+				port, err := strconv.Atoi(env.Value)
+				if err != nil {
+					continue
+				}
+
+				service.Port = port
+			case "SERVICE_PROTOCOL_TYPE":
+				service.Protocol = env.Value
+			case "DNS_FL_DOMAIN":
+				service.FLDomain = env.Value
+			case "HEALTH_CHECK_URL":
+				service.HealthCheck.Path = env.Value
+			case "HEALTH_CHECK_PORT":
+				port, err := strconv.Atoi(env.Value)
+				if err != nil {
+					continue
+				}
+
+				service.HealthCheck.Port = port
+			}
+		}
+
+		service.Namespace = event.Namespace
+		if err := validator.New().Struct(service); err != nil {
+			if service.Name == "" {
+				service.Name = container.Name
+			}
+
+			log.With("shared", "event").Infof("container[%s] variable is invalid: %s", service.Name, err)
+		} else {
+			services = append(services, service)
+		}
+	}
+
+	return services, nil
 }
 
 // GetObjectMetaData returns metadata of a given k8s object

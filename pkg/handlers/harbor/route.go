@@ -23,6 +23,8 @@ func (h *Handler) getName(ctx echo.Context) error {
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: h.Name()}.JSON(ctx)
 }
 
+// Get the list of harbor projects
+// Filter and page query with GetProjectPayload
 func (h *Handler) getProject(ctx echo.Context) error {
 	p := new(GetProjectPayload)
 	if err := ctx.Bind(p); err != nil {
@@ -42,6 +44,7 @@ func (h *Handler) getProject(ctx echo.Context) error {
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: res.Result()}.JSON(ctx)
 }
 
+// Create harbor project
 func (h *Handler) createProject(ctx echo.Context) error {
 	p := new(CreateProjectPayload)
 	if err := ctx.Bind(p); err != nil {
@@ -61,6 +64,9 @@ func (h *Handler) createProject(ctx echo.Context) error {
 	return shared.Responder{Status: http.StatusOK, Success: true}.JSON(ctx)
 }
 
+// Delete harbor project
+// params:
+//     id -> project id
 func (h *Handler) deleteProject(ctx echo.Context) error {
 	id := ctx.Param("id")
 	res, err := h.Request().Delete(h.URL(fmt.Sprintf("/api/projects/%s", id)))

@@ -10,14 +10,14 @@ import (
 
 // Handling requests to create services
 func (h *Handler) createService(ctx echo.Context) error {
-	p := ctx.Get("payload")
+	p := ctx.Get("payload").(*shared.ServicePayload)
 
-	if err := h.etcdCreate(p); err != nil {
+	if err := h.handlers.etcd.CreateService(p); err != nil {
 		h.logger.Error(err)
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	if err := h.gatewayCreate(p); err != nil {
+	if err := h.handlers.gateway.CreateService(p); err != nil {
 		h.logger.Error(err)
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -27,14 +27,14 @@ func (h *Handler) createService(ctx echo.Context) error {
 
 // Handling requests to delete a service
 func (h *Handler) deleteService(ctx echo.Context) error {
-	p := ctx.Get("payload")
+	p := ctx.Get("payload").(*shared.ServicePayload)
 
-	if err := h.etcdDelete(p); err != nil {
+	if err := h.handlers.etcd.DeleteService(p); err != nil {
 		h.logger.Error(err)
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	if err := h.gatewayDelete(p); err != nil {
+	if err := h.handlers.gateway.DeleteService(p); err != nil {
 		h.logger.Error(err)
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}

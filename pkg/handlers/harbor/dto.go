@@ -12,6 +12,7 @@ const (
 	maxPageSize     int64 = 500
 )
 
+// pagination information
 type Pagination struct {
 	Page     int64 `query:"page" url:"page,omitempty"`
 	PageSize int64 `query:"page_size" url:"page_size,omitempty"`
@@ -27,6 +28,7 @@ type CreateProjectPayload struct {
 	Public bool   `json:"public" validate:"required"`
 }
 
+// Convert GetProjectPayload struct to querystring
 func (p *GetProjectPayload) ToQueryString() string {
 	if p.PageSize < 1 || p.PageSize > maxPageSize {
 		p.PageSize = defaultPageSize
@@ -36,6 +38,7 @@ func (p *GetProjectPayload) ToQueryString() string {
 	return values.Encode()
 }
 
+// Convert CreateProjectPayload struct to JSON
 func (p *CreateProjectPayload) ToJSON() string {
 	jsonstr, _ := json.Marshal(map[string]interface{}{
 		"project_name": p.Name,

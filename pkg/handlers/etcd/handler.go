@@ -2,17 +2,19 @@ package etcd
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/srelab/watcher/pkg/handlers/shared"
 
 	"github.com/coreos/etcd/pkg/transport"
 	"github.com/pkg/errors"
 	"github.com/srelab/common/log"
 	"github.com/srelab/watcher/pkg/g"
+	"github.com/srelab/watcher/pkg/handlers/shared"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	apiV1 "k8s.io/api/core/v1"
 )
 
 type Handler struct {
@@ -28,8 +30,25 @@ func (h *Handler) RoutePrefix() string     { return "/" + h.Name() }
 func (h *Handler) DNSPrefix() string       { return h.config.DNSPrefix }
 func (h *Handler) Close()                  { h.client.Close() }
 func (h *Handler) Created(e *shared.Event) {}
-func (h *Handler) Deleted(e *shared.Event) {}
 func (h *Handler) Updated(e *shared.Event) {}
+
+// Remove DNS resolution records from etcd when the pod is detected to be destroyed
+func (h *Handler) Deleted(e *shared.Event) {
+	if e.ResourceType == shared.ResourceTypePod {
+		pod := e.Object.(*apiV1.Pod)
+		services, err := e.GetPodServices(pod)
+		if err != nil {
+			h.logger.Errorf("an error occurred while getting services: %s", err)
+			return
+		}
+
+		for _, service := range services {
+			if err := h.DeleteService(service); err != nil {
+				h.logger.Errorf("an error occurred while deleting the service: %s", err)
+			}
+		}
+	}
+}
 
 // Initialize the Etcd client and log
 func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
@@ -147,4 +166,43 @@ func (h *Handler) eErrorHandling(err error) error {
 	}
 
 	return err
+}
+
+// Remove DNS resolution records from CoreDNS
+func (h *Handler) DeleteService(service *shared.ServicePayload) error {
+	res, err := h.GetKey(
+		filepath.Join(h.DNSPrefix(), service.DNSName()),
+		false,
+		true,
+		0,
+	)
+
+	if err != nil {
+		return fmt.Errorf("get key error: %s", err)
+	}
+
+	for _, item := range res.Kvs {
+		key := filepath.Join(h.DNSPrefix(), service.DNSName(), service.DNSKey())
+		if string(item.Key) != key {
+			continue
+		}
+
+		if _, err := h.DeleteKey(key, false); err != nil {
+			return fmt.Errorf("etcd key cannot be delete: %s", err)
+		}
+	}
+
+	h.logger.Infof("[etcd][%s] - [%s] delete successful", service.Name, service.String())
+	return nil
+}
+
+// Convert service to DNS resolution record and write to etcd for use by CoreDNS
+func (h *Handler) CreateService(service *shared.ServicePayload) error {
+	key := filepath.Join(h.DNSPrefix(), service.DNSName(), service.DNSKey())
+	if _, err := h.PutKey(key, service.DNSRecord(), 0); err != nil {
+		return fmt.Errorf("etcd key cannot be create: %s", err)
+	}
+
+	h.logger.Infof("[etcd][%s] - [%s] create successful", service.Name, service.String())
+	return nil
 }

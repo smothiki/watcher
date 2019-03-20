@@ -84,7 +84,7 @@ func Start() {
 	// follow-up can implement public methods for the Close()
 	defer etcdHandler.Close()
 
-	informerHandlers := []shared.Handler{saHandler}
+	informerHandlers := []shared.Handler{etcdHandler, gatewayHandler, saHandler}
 	if g.Config().Resource.Pod {
 		informer := cache.NewSharedIndexInformer(
 			&cache.ListWatch{
