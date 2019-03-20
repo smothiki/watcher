@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) AddRoutes(group *echo.Group) {
-	group.GET("", h.getName)
+	group.GET(shared.EmptyPath, h.getName)
 }
 
 func (h *Handler) getName(ctx echo.Context) error {

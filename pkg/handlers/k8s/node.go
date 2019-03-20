@@ -12,7 +12,7 @@ import (
 // List objects of kind Namespace
 // The control list content can be filtered by the options payload.
 func (h *Handler) getNode(ctx echo.Context) error {
-	var p = new(getOptionsPayload)
+	var p = new(GetOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}

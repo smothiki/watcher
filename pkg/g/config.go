@@ -61,10 +61,17 @@ type SAConfig struct {
 	NoticeId string `mapstructure:"NoticeId"`
 }
 
+type HarborConfig struct {
+	Endpoint string `mapstructure:"Endpoint"`
+	Username string `mapstructure:"Username"`
+	Password string `mapstructure:"Password"`
+}
+
 type Handlers struct {
 	GatewayConfigs []GatewayConfig `mapstructure:"Gateway"`
 	EtcdConfig     *EtcdConfig     `mapstructure:"Etcd"`
 	SAConfig       *SAConfig       `mapstructure:"SA"`
+	HarborConfig   *HarborConfig   `mapstructure:"Harbor"`
 }
 
 type Resource struct {

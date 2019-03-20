@@ -50,7 +50,7 @@ func (h *Handler) AddRoutes(group *echo.Group) {
 		}
 	}())
 
-	group.GET("", h.getName)
+	group.GET(shared.EmptyPath, h.getName)
 	group.GET("/keys*", h.getKey)
 	group.PUT("/keys*", h.putKey)
 	group.DELETE("/keys*", h.delKey)

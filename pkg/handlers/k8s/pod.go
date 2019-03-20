@@ -12,7 +12,7 @@ import (
 // List objects of kind Pod
 // The control list content can be filtered by the options payload.
 func (h *Handler) getPod(ctx echo.Context) error {
-	var p = new(getOptionsPayload)
+	var p = new(GetOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -75,7 +75,7 @@ func (h *Handler) updatePod(ctx echo.Context) error {
 // The interface supports delete_policy to control the deletion mechanism.
 // Unless you know how to use it, you should use the default value.
 func (h *Handler) deletePod(ctx echo.Context) error {
-	p := new(deleteOptionsPayload)
+	p := new(DeleteOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}

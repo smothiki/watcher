@@ -47,7 +47,7 @@ func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
 
 // Convert service to DNS resolution record and write to etcd for use by CoreDNS
 func (h *Handler) etcdCreate(payload interface{}) error {
-	s := payload.(*servicePayload)
+	s := payload.(*ServicePayload)
 
 	key := filepath.Join(h.handlers.etcd.DNSPrefix(), s.DNSName(), s.DNSKey())
 	if _, err := h.handlers.etcd.PutKey(key, s.DNSRecord(), 0); err != nil {
@@ -60,7 +60,7 @@ func (h *Handler) etcdCreate(payload interface{}) error {
 
 // Remove DNS resolution records from CoreDNS
 func (h *Handler) etcdDelete(payload interface{}) error {
-	s := payload.(*servicePayload)
+	s := payload.(*ServicePayload)
 
 	res, err := h.handlers.etcd.GetKey(
 		filepath.Join(h.handlers.etcd.DNSPrefix(), s.DNSName()),
@@ -90,7 +90,7 @@ func (h *Handler) etcdDelete(payload interface{}) error {
 
 // Write service information to the API Gateway
 func (h *Handler) gatewayCreate(payload interface{}) error {
-	s := payload.(*servicePayload)
+	s := payload.(*ServicePayload)
 
 	// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
 	regURL := h.handlers.gateway.URL(s.Namespace, fmt.Sprintf("/upstreams/%s/register", s.Name))
@@ -124,7 +124,7 @@ func (h *Handler) gatewayCreate(payload interface{}) error {
 
 // Remove service information from the API Gateway
 func (h *Handler) gatewayDelete(payload interface{}) error {
-	s := payload.(*servicePayload)
+	s := payload.(*ServicePayload)
 
 	// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
 	regURL := h.handlers.gateway.URL(s.Namespace, fmt.Sprintf("/upstreams/%s/unregister", s.Name))

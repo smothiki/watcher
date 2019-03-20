@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/srelab/watcher/pkg/handlers/harbor"
+
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -45,9 +47,10 @@ func Start() {
 		kubeClient = GetClient()
 	}
 
-	var k8sHandler = new(k8s.Handler)
 	var gatewayHandler = new(gateway.Handler)
 	var etcdHandler = new(etcd.Handler)
+	var k8sHandler = new(k8s.Handler)
+	var harborHandler = new(harbor.Handler)
 
 	var saHandler = new(sa.Handler)
 	var coreHandler = new(core.Handler)
@@ -63,6 +66,10 @@ func Start() {
 
 	if err := etcdHandler.Init(g.Config()); err != nil {
 		log.Panic("init etcd handler error: ", err)
+	}
+
+	if err := harborHandler.Init(g.Config()); err != nil {
+		log.Panic("init sa handler error: ", err)
 	}
 
 	if err := saHandler.Init(g.Config(), etcdHandler); err != nil {
@@ -349,8 +356,9 @@ func Start() {
 
 	// Selectively add routes when some handler need to expose the interface
 	handlersRoute := engine.Group("/handlers")
-	etcdHandler.AddRoutes(handlersRoute.Group(etcdHandler.RoutePrefix()))
 	gatewayHandler.AddRoutes(handlersRoute.Group(gatewayHandler.RoutePrefix()))
+	etcdHandler.AddRoutes(handlersRoute.Group(etcdHandler.RoutePrefix()))
+	harborHandler.AddRoutes(handlersRoute.Group(harborHandler.RoutePrefix()))
 	k8sHandler.AddRoutes(handlersRoute.Group(k8sHandler.RoutePrefix()))
 	coreHandler.AddRoutes(handlersRoute.Group(coreHandler.RoutePrefix()))
 

@@ -14,7 +14,7 @@ func (h *Handler) AddRoutes(group *echo.Group) {
 	serviceGroup.Use(func() echo.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx echo.Context) error {
-				var p = new(servicePayload)
+				var p = new(ServicePayload)
 				p.Name = ctx.Param("name")
 
 				if err := ctx.Bind(p); err != nil {

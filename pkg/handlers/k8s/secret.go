@@ -13,7 +13,7 @@ import (
 // List objects of kind Secret
 // The control list content can be filtered by the options payload.
 func (h *Handler) getSecret(ctx echo.Context) error {
-	var p = new(getOptionsPayload)
+	var p = new(GetOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
@@ -63,7 +63,7 @@ func (h *Handler) updateSecret(ctx echo.Context) error {
 }
 
 func (h *Handler) deleteSecret(ctx echo.Context) error {
-	p := new(deleteOptionsPayload)
+	p := new(DeleteOptionsPayload)
 	if err := ctx.Bind(p); err != nil {
 		return shared.Responder{Status: http.StatusBadRequest, Success: false, Msg: err}.JSON(ctx)
 	}
