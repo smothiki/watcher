@@ -1,43 +1,47 @@
-# Consists of 'IP:Port', e.g. ':8080' listens on any IP and on Port 8080
-ListenAddr: ':8080'
+Log:
+  Level: debug
+  File: ./watcher.log
+
+HTTP:
+  Host: 0.0.0.0
+  Port: 9999
+  Debug: true
 
 Resource:
   Pod: true
-
-Log:
-  Level: debug
-  File: watcher.log
+  Deployment: true
 
 Kubernetes:
-  Config: kubeconfig
-  Namespace: default
+  Config:
+  #: empty value means watch all namespaces
+  Namespace:
 
 Handlers:
   Gateway:
     - Host:
-      Port: 8888
-      Namespace: default
-      Username: admin
-      Password: 123123
-
-    - Host:
-      Port: 8080
-      Namespace: prod
-      Username: admin
-      Password: 123123
+      Port:
+      Namespace:
+      Username:
+      Password:
 
   Etcd:
-    KeyPath: etcd-key.pem
-    CertPath: etcd.pem
-    CAPath: ca.pem
-    Timeout: 10
-    Prefix: /skydns/co/welab
+    KeyFile:
+    CertFile:
+    CAFile:
+    Timeout: 5
+    DNSPrefix: /dns
     Endpoints:
-      - 10.0.0.1:2379
-      - 10.0.0.2:2379
-      - 10.0.0.3:2379
+      -
+      -
+      -
 
   SA:
+    Endpoint:
+    Username:
+    Password:
+    NoticeId:
+
+  Harbor:
     Endpoint:
     Username:
     Password:
