@@ -58,7 +58,10 @@ type SAConfig struct {
 	Endpoint string `mapstructure:"Endpoint"`
 	Username string `mapstructure:"Username"`
 	Password string `mapstructure:"Password"`
-	NoticeId string `mapstructure:"NoticeId"`
+	Notice   struct {
+		ChatID string `mapstructure:"ChatID"`
+		Enable bool   `mapstructure:"Enable"`
+	} `mapstructure:"Notice"`
 }
 
 type HarborConfig struct {

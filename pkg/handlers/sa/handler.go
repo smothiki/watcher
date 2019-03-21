@@ -76,13 +76,14 @@ func (h *Handler) request() *resty.Request {
 }
 
 func (h *Handler) send(content string) {
+	if !h.config.Notice.Enable {
+		return
+	}
+
 	h.request().SetHeader("Host", "sa.wolaidai.com").
 		SetHeader("Content-Type", "application/json").
 		SetBasicAuth(h.config.Username, h.config.Password).
 		SetBody(map[string]interface{}{
-			"config": map[string]interface{}{
-				"chat_id": h.config.NoticeId,
-				"content": content,
-			},
+			"config": map[string]interface{}{"chat_id": h.config.Notice.ChatID, "content": content},
 		}).Post(fmt.Sprintf("%s/api/tasks/wechat/push", h.config.Endpoint))
 }

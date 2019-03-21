@@ -39,7 +39,9 @@ Handlers:
     Endpoint:
     Username:
     Password:
-    NoticeId:
+    Notice:
+      ChatID:
+      Enable: false
 
   Harbor:
     Endpoint:
