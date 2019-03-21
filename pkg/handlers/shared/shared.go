@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/srelab/common/log"
@@ -20,6 +22,46 @@ import (
 	"github.com/labstack/echo"
 	"github.com/srelab/watcher/pkg/g"
 )
+
+// humanized default time format
+const defaultTimeFormat = "2006-01-02 15:04:05"
+
+// custom time types
+// Used to format time into a human-readable string
+type Datetime struct {
+	time.Time
+}
+
+func (d *Datetime) UnmarshalJSON(b []byte) (err error) {
+	str := strings.Trim(string(b), "\"")
+	if str == "null" || str == "" {
+		d.Time = time.Time{}
+		return
+	}
+
+	cst, _ := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return fmt.Errorf("time.LoadLocation error: %s", err.Error())
+	}
+
+	d.Time, err = time.ParseInLocation(defaultTimeFormat, str, cst)
+	if err != nil {
+		// When time cannot be resolved using the default format, try RFC3339Nano
+		if d.Time, err = time.ParseInLocation(time.RFC3339Nano, str, cst); err == nil {
+			d.Time = d.Time.In(cst)
+		}
+	}
+
+	return
+}
+
+func (d *Datetime) MarshalJSON() ([]byte, error) {
+	if d.Time.UnixNano() == (time.Time{}).UnixNano() {
+		return []byte("null"), nil
+	}
+
+	return []byte(fmt.Sprintf("\"%s\"", d.Time.Format(defaultTimeFormat))), nil
+}
 
 // empty path of the route
 const EmptyPath = ""
@@ -129,6 +171,9 @@ func (event *Event) GetPodServices(pod *apiV1.Pod) ([]*ServicePayload, error) {
 				service.Protocol = env.Value
 			case "DNS_FL_DOMAIN":
 				service.FLDomain = env.Value
+				if service.FLDomain == "-" {
+					service.FLDomain = ""
+				}
 			case "HEALTH_CHECK_URL":
 				service.HealthCheck.Path = env.Value
 			case "HEALTH_CHECK_PORT":

@@ -47,7 +47,7 @@ func (h *Handler) Request() *resty.Request {
 	r := resty.New().SetRetryCount(3).SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(10 * time.Second)
 	r.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).SetCookie(&http.Cookie{
 		Name: "sid", Value: sid, HttpOnly: true,
-	}).SetHostURL(h.config.Endpoint).SetDebug(true)
+	}).SetHostURL(h.config.Endpoint)
 
 	res, err := r.R().Get("/api/users/current")
 	if res.StatusCode() != http.StatusOK || err != nil {

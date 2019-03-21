@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/srelab/watcher/pkg/handlers/shared"
+
 	"github.com/google/go-querystring/query"
 )
 
@@ -11,6 +13,37 @@ const (
 	defaultPageSize int64 = 15
 	maxPageSize     int64 = 500
 )
+
+type Cfg struct {
+	Labels map[string]string `json:"labels"`
+}
+
+type Tag struct {
+	Digest        string          `json:"digest"`
+	Name          string          `json:"name"`
+	Size          int64           `json:"size"`
+	Architecture  string          `json:"architecture"`
+	OS            string          `json:"os"`
+	OSVersion     string          `json:"os.version"`
+	DockerVersion string          `json:"docker_version"`
+	Author        string          `json:"author"`
+	Created       shared.Datetime `json:"created"`
+	Config        *Cfg            `json:"config"`
+}
+
+type Tags []Tag
+
+func (tags Tags) Len() int {
+	return len(tags)
+}
+
+func (tags Tags) Less(i, j int) bool {
+	return tags[i].Created.Before(tags[j].Created.Time)
+}
+
+func (tags Tags) Swap(i, j int) {
+	tags[i], tags[j] = tags[j], tags[i]
+}
 
 // pagination information
 type Pagination struct {
@@ -21,6 +54,16 @@ type Pagination struct {
 type GetProjectPayload struct {
 	Pagination
 	Name string `query:"name" url:"name,omitempty"`
+}
+
+type GetProjectRepoPayload struct {
+	Pagination
+	ID string `url:"project_id,omitempty"`
+}
+
+type GetProjectRepoTagPayload struct {
+	Limit int    `query:"limit"`
+	Sort  string `query:"sort" validate:"in=desc;asc"`
 }
 
 type CreateProjectPayload struct {
@@ -34,6 +77,18 @@ func (p *GetProjectPayload) ToQueryString() string {
 		p.PageSize = defaultPageSize
 	}
 
+	values, _ := query.Values(p)
+	return values.Encode()
+}
+
+// Convert GetProjectRepoPayload struct to querystring
+func (p *GetProjectRepoPayload) ToQueryString() string {
+	values, _ := query.Values(p)
+	return values.Encode()
+}
+
+// Convert GetProjectRepoTagPayload struct to querystring
+func (p *GetProjectRepoTagPayload) ToQueryString() string {
 	values, _ := query.Values(p)
 	return values.Encode()
 }

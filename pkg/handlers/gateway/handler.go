@@ -29,9 +29,9 @@ func (h *Handler) Updated(e *shared.Event) {}
 
 // Remove the service from the gateway when it detects that the pod is destroyed
 func (h *Handler) Deleted(e *shared.Event) {
-	if e.ResourceType == shared.ResourceTypePod {
-		pod := e.Object.(*apiV1.Pod)
-		services, err := e.GetPodServices(pod)
+	switch object := e.Object.(type) {
+	case *apiV1.Pod:
+		services, err := e.GetPodServices(object)
 		if err != nil {
 			h.logger.Errorf("an error occurred while getting services: %s", err)
 			return
@@ -42,6 +42,8 @@ func (h *Handler) Deleted(e *shared.Event) {
 				h.logger.Errorf("an error occurred while deleting the service: %s", err)
 			}
 		}
+	default:
+		return
 	}
 }
 
