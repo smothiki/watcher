@@ -47,37 +47,34 @@ func Start() {
 		kubeClient = GetClient()
 	}
 
-	var gatewayHandler = new(gateway.Handler)
-	var etcdHandler = new(etcd.Handler)
 	var k8sHandler = new(k8s.Handler)
+	if err := k8sHandler.Init(g.Config(), kubeClient); err != nil {
+		log.Panicf("init handler[%s] error: ", err, k8sHandler.Name())
+	}
+
+	var gatewayHandler = new(gateway.Handler)
+	if err := gatewayHandler.Init(g.Config()); err != nil {
+		log.Panicf("init handler[%s] error: ", err, gatewayHandler.Name())
+	}
+
+	var etcdHandler = new(etcd.Handler)
+	if err := etcdHandler.Init(g.Config()); err != nil {
+		log.Panicf("init handler[%s] error: ", err, etcdHandler.Name())
+	}
+
 	var harborHandler = new(harbor.Handler)
+	if err := harborHandler.Init(g.Config()); err != nil {
+		log.Panicf("init handler[%s] error: ", err, harborHandler.Name())
+	}
 
 	var saHandler = new(sa.Handler)
-	var coreHandler = new(core.Handler)
-
-	// initialize all handler
-	if err := k8sHandler.Init(g.Config(), kubeClient); err != nil {
-		log.Panic("init default handler error: ", err)
-	}
-
-	if err := gatewayHandler.Init(g.Config()); err != nil {
-		log.Panic("init gateway handler error: ", err)
-	}
-
-	if err := etcdHandler.Init(g.Config()); err != nil {
-		log.Panic("init etcd handler error: ", err)
-	}
-
-	if err := harborHandler.Init(g.Config()); err != nil {
-		log.Panic("init sa handler error: ", err)
-	}
-
 	if err := saHandler.Init(g.Config(), etcdHandler); err != nil {
-		log.Panic("init sa handler error: ", err)
+		log.Panicf("init handler[%s] error: ", err, saHandler.Name())
 	}
 
+	var coreHandler = new(core.Handler)
 	if err := coreHandler.Init(g.Config(), etcdHandler, gatewayHandler); err != nil {
-		log.Panic("init core handler error: ", err)
+		log.Panicf("init handler[%s] error: ", err, coreHandler.Name())
 	}
 
 	// close the etcd client
