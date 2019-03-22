@@ -28,12 +28,12 @@ func (h *Handler) Close()              {}
 
 // The sa handler needs to use the etcd handler to ensure
 // that messages are not sent repeatedly in a clustered environment.
-func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
 	h.config = config.Handlers.SAConfig
 	h.logger = log.With("handlers", h.Name())
 
-	for _, obj := range objs {
-		switch object := obj.(type) {
+	for _, itf := range itfs {
+		switch object := itf.(type) {
 		case *etcd.Handler:
 			h.handlers.etcd = object
 		}

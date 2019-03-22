@@ -25,11 +25,11 @@ func (h *Handler) Deleted(e *shared.Event) {}
 func (h *Handler) Updated(e *shared.Event) {}
 
 // Initialize log and dependent handler
-func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
 	h.logger = log.With("handlers", h.Name())
 
-	for _, obj := range objs {
-		switch object := obj.(type) {
+	for _, itf := range itfs {
+		switch object := itf.(type) {
 		case *etcd.Handler:
 			h.handlers.etcd = object
 		case *gateway.Handler:

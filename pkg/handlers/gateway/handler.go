@@ -50,7 +50,7 @@ func (h *Handler) Deleted(e *shared.Event) {
 
 // initialize the gateway handler
 // it will be responsible for handling kube events, regsiter and unregsiter pods
-func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
 	h.configs = config.Handlers.GatewayConfigs
 	h.logger = log.With("handlers", h.Name())
 

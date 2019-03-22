@@ -72,7 +72,7 @@ type Handler interface {
 	Name() string
 	RoutePrefix() string
 
-	Init(config *g.Configuration, obj ...interface{}) error
+	Init(config *g.Configuration, itfs ...interface{}) error
 	Created(event *Event)
 	Deleted(event *Event)
 	Updated(event *Event)

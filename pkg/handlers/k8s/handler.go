@@ -1,8 +1,6 @@
 package k8s
 
 import (
-	"fmt"
-
 	"github.com/srelab/watcher/pkg/g"
 	"github.com/srelab/watcher/pkg/handlers/shared"
 	"k8s.io/client-go/kubernetes"
@@ -26,10 +24,9 @@ func (h *Handler) Updated(e *shared.Event) {}
 
 // Init initializes handler configuration
 // Do nothing for default handler
-func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
-	fmt.Println(objs)
-	for _, obj := range objs {
-		switch object := obj.(type) {
+func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
+	for _, itf := range itfs {
+		switch object := itf.(type) {
 		case kubernetes.Interface:
 			h.handlers.kube = object
 		}

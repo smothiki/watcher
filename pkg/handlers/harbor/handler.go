@@ -29,7 +29,7 @@ func (h *Handler) Created(e *shared.Event) {}
 func (h *Handler) Deleted(e *shared.Event) {}
 func (h *Handler) Updated(e *shared.Event) {}
 
-func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
 	h.config = config.Handlers.HarborConfig
 	h.logger = log.With("handlers", h.Name())
 
