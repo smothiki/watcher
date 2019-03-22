@@ -67,7 +67,7 @@ func Start() {
 	// Initialize all handlers
 	for _, handler := range informerHandlers {
 		if err := handler.Init(g.Config(), informerHandlers.Objs(kubeClient)...); err != nil {
-			log.Panicf("init handler[%s] error: ", err, handler.Name())
+			log.Panicf("init handler[%s] error: %s", handler.Name(), err)
 		}
 
 		handler.AddRoutes(handlersRoute.Group(handler.RoutePrefix()))
