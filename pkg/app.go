@@ -47,41 +47,42 @@ func Start() {
 		kubeClient = GetClient()
 	}
 
-	var k8sHandler = new(k8s.Handler)
-	if err := k8sHandler.Init(g.Config(), kubeClient); err != nil {
-		log.Panicf("init handler[%s] error: ", err, k8sHandler.Name())
+	informerHandlers := shared.Handlers{
+		new(k8s.Handler),
+		new(gateway.Handler),
+		new(etcd.Handler),
+		new(harbor.Handler),
+		new(sa.Handler),
+		new(core.Handler),
 	}
 
-	var gatewayHandler = new(gateway.Handler)
-	if err := gatewayHandler.Init(g.Config()); err != nil {
-		log.Panicf("init handler[%s] error: ", err, gatewayHandler.Name())
+	// Open the built-in handler interface as http
+	engine := handlers.NewHandlersEngine()
+	engine.Use(handlers.NewMetric())
+	engine.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+
+	// Selectively add routes when some handler need to expose the interface
+	handlersRoute := engine.Group("/handlers")
+
+	// Initialize all handlers
+	for _, handler := range informerHandlers {
+		if err := handler.Init(g.Config(), informerHandlers.Objs(kubeClient)...); err != nil {
+			log.Panicf("init handler[%s] error: ", err, handler.Name())
+		}
+
+		handler.AddRoutes(handlersRoute.Group(handler.RoutePrefix()))
 	}
 
-	var etcdHandler = new(etcd.Handler)
-	if err := etcdHandler.Init(g.Config()); err != nil {
-		log.Panicf("init handler[%s] error: ", err, etcdHandler.Name())
-	}
+	// release resources, as needed
+	defer func() {
+		for _, handler := range informerHandlers {
+			handler.Close()
+		}
+	}()
 
-	var harborHandler = new(harbor.Handler)
-	if err := harborHandler.Init(g.Config()); err != nil {
-		log.Panicf("init handler[%s] error: ", err, harborHandler.Name())
-	}
+	// starts an HTTP server.
+	go engine.Start(g.Config().Http.GetListenAddr())
 
-	var saHandler = new(sa.Handler)
-	if err := saHandler.Init(g.Config(), etcdHandler); err != nil {
-		log.Panicf("init handler[%s] error: ", err, saHandler.Name())
-	}
-
-	var coreHandler = new(core.Handler)
-	if err := coreHandler.Init(g.Config(), etcdHandler, gatewayHandler); err != nil {
-		log.Panicf("init handler[%s] error: ", err, coreHandler.Name())
-	}
-
-	// close the etcd client
-	// follow-up can implement public methods for the Close()
-	defer etcdHandler.Close()
-
-	informerHandlers := []shared.Handler{etcdHandler, gatewayHandler, saHandler}
 	if g.Config().Resource.Pod {
 		informer := cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -345,21 +346,6 @@ func Start() {
 		c := controller.New(kubeClient, informer, shared.ResourceTypeIngress, informerHandlers)
 		go c.Run(stopCh)
 	}
-
-	// Open the built-in handler interface as http
-	engine := handlers.NewHandlersEngine()
-	engine.Use(handlers.NewMetric())
-	engine.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
-
-	// Selectively add routes when some handler need to expose the interface
-	handlersRoute := engine.Group("/handlers")
-	gatewayHandler.AddRoutes(handlersRoute.Group(gatewayHandler.RoutePrefix()))
-	etcdHandler.AddRoutes(handlersRoute.Group(etcdHandler.RoutePrefix()))
-	harborHandler.AddRoutes(handlersRoute.Group(harborHandler.RoutePrefix()))
-	k8sHandler.AddRoutes(handlersRoute.Group(k8sHandler.RoutePrefix()))
-	coreHandler.AddRoutes(handlersRoute.Group(coreHandler.RoutePrefix()))
-
-	go engine.Start(g.Config().Http.GetListenAddr())
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGTERM)

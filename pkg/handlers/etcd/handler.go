@@ -53,7 +53,7 @@ func (h *Handler) Deleted(e *shared.Event) {
 }
 
 // Initialize the Etcd client and log
-func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
 	h.config = config.Handlers.EtcdConfig
 	h.config.DNSPrefix = strings.TrimRight(h.config.DNSPrefix, "/")
 

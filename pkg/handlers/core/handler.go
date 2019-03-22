@@ -19,16 +19,17 @@ type Handler struct {
 
 func (h *Handler) Name() string            { return "core" }
 func (h *Handler) RoutePrefix() string     { return "/" + h.Name() }
+func (h *Handler) Close()                  {}
 func (h *Handler) Created(e *shared.Event) {}
 func (h *Handler) Deleted(e *shared.Event) {}
 func (h *Handler) Updated(e *shared.Event) {}
 
 // Initialize log and dependent handler
-func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
 	h.logger = log.With("handlers", h.Name())
 
-	for _, handler := range handlers {
-		switch object := handler.(type) {
+	for _, obj := range objs {
+		switch object := obj.(type) {
 		case *etcd.Handler:
 			h.handlers.etcd = object
 		case *gateway.Handler:

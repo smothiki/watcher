@@ -24,6 +24,7 @@ type Handler struct {
 func (h *Handler) Name() string            { return "gateway" }
 func (h *Handler) Handler() *Handler       { return h }
 func (h *Handler) RoutePrefix() string     { return "/" + h.Name() }
+func (h *Handler) Close()                  {}
 func (h *Handler) Created(e *shared.Event) {}
 func (h *Handler) Updated(e *shared.Event) {}
 
@@ -49,7 +50,7 @@ func (h *Handler) Deleted(e *shared.Event) {
 
 // initialize the gateway handler
 // it will be responsible for handling kube events, regsiter and unregsiter pods
-func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
 	h.configs = config.Handlers.GatewayConfigs
 	h.logger = log.With("handlers", h.Name())
 

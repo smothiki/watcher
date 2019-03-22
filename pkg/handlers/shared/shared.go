@@ -72,10 +72,26 @@ type Handler interface {
 	Name() string
 	RoutePrefix() string
 
-	Init(config *g.Configuration, handlers ...interface{}) error
+	Init(config *g.Configuration, obj ...interface{}) error
 	Created(event *Event)
 	Deleted(event *Event)
 	Updated(event *Event)
+	Close()
+
+	AddRoutes(group *echo.Group)
+}
+
+// Store the slice of the handler
+type Handlers []Handler
+
+// Optionally pass objs:...interface , merge objs and handles and return
+// Pass objs to each handler, as needed
+func (handlers Handlers) Objs(objs ...interface{}) []interface{} {
+	for _, handler := range handlers {
+		objs = append(objs, handler)
+	}
+
+	return objs
 }
 
 // Responder in order to unify the returned response structure

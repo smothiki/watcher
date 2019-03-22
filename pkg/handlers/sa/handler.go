@@ -24,15 +24,16 @@ type Handler struct {
 
 func (h *Handler) Name() string        { return "sa" }
 func (h *Handler) RoutePrefix() string { return "/" + h.Name() }
+func (h *Handler) Close()              {}
 
 // The sa handler needs to use the etcd handler to ensure
 // that messages are not sent repeatedly in a clustered environment.
-func (h *Handler) Init(config *g.Configuration, handlers ...interface{}) error {
+func (h *Handler) Init(config *g.Configuration, objs ...interface{}) error {
 	h.config = config.Handlers.SAConfig
 	h.logger = log.With("handlers", h.Name())
 
-	for _, handler := range handlers {
-		switch object := handler.(type) {
+	for _, obj := range objs {
+		switch object := obj.(type) {
 		case *etcd.Handler:
 			h.handlers.etcd = object
 		}
