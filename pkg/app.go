@@ -356,6 +356,7 @@ func Start() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// stops the server gracefully.
 	if err := engine.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}

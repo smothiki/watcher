@@ -4,5 +4,5 @@ const (
 	NAME    = "Watcher"
 	AUTHOR  = "freedie.liu"
 	MAIL    = "freedie.liu@wolaidai.com"
-	VERSION = "1.11"
+	VERSION = "2.1"
 )
