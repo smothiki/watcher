@@ -87,14 +87,26 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 		)
 	}
 
-	res, err := h.Request().SetBody(map[string]string{
-		"name":    service.Name,
-		"host":    service.Host,
-		"type":    service.Protocol,
-		"port":    strconv.Itoa(service.Port),
-		"hc_path": service.HealthCheck.Path,
-		"hc_port": strconv.Itoa(service.HealthCheck.Port),
-	}).Post(regURL)
+	var (
+		res *resty.Response
+		err error
+	)
+
+	if service.Protocol == "http" {
+		res, err = h.Request().SetBody(map[string]string{
+			"host":    service.Host,
+			"type":    service.Protocol,
+			"port":    strconv.Itoa(service.Port),
+			"hc_path": service.HealthCheck.Path,
+			"hc_port": strconv.Itoa(service.HealthCheck.Port),
+		}).Post(regURL)
+	} else {
+		res, err = h.Request().SetBody(map[string]string{
+			"host": service.Host,
+			"type": "general",
+			"port": strconv.Itoa(service.Port),
+		}).Post(regURL)
+	}
 
 	if err != nil {
 		return fmt.Errorf("[%s] - [%s] register error: %s", service.Name, res.String(), err)

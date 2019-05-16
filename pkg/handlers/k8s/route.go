@@ -24,6 +24,13 @@ func (h *Handler) AddRoutes(group *echo.Group) {
 	nsPodGroup.POST(shared.EmptyPath, h.createPod)
 	nsPodGroup.PUT(shared.EmptyPath, h.updatePod)
 	nsPodGroup.DELETE(shared.EmptyPath, h.deletePod)
+	nsPodGroup.GET("/:name/logs", h.getPodLogs)
+
+	nsEventGroup := nsGroup.Group("/:ns/events")
+	nsEventGroup.GET(shared.EmptyPath, h.getEvent)
+	nsEventGroup.POST(shared.EmptyPath, h.createEvent)
+	nsEventGroup.PUT(shared.EmptyPath, h.updateEvent)
+	nsEventGroup.DELETE(shared.EmptyPath, h.deleteEvent)
 
 	nsSecretGroup := nsGroup.Group("/:ns/secrets")
 	nsSecretGroup.GET(shared.EmptyPath, h.getSecret)

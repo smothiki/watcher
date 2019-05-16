@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/labstack/echo"
@@ -102,4 +103,22 @@ func (h *Handler) deletePod(ctx echo.Context) error {
 	}
 
 	return shared.Responder{Status: http.StatusOK, Success: true}.JSON(ctx)
+}
+
+// Get a Pod Logs
+// For now, this is just a test interface
+func (h *Handler) getPodLogs(ctx echo.Context) error {
+	name := ctx.Param("name")
+	req := h.handlers.kube.CoreV1().Pods(ctx.Param("ns")).GetLogs(name, &coreV1.PodLogOptions{})
+
+	rc, err := req.Stream()
+	if err != nil {
+		return shared.Responder{Status: http.StatusOK, Success: true, Result: err}.JSON(ctx)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(rc)
+
+	defer rc.Close()
+	return shared.Responder{Status: http.StatusOK, Success: true, Result: buf.String()}.JSON(ctx)
 }
