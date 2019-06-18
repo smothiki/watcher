@@ -2,6 +2,7 @@ package harbor
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/srelab/watcher/pkg/handlers/shared"
@@ -66,6 +67,16 @@ type GetProjectRepoTagPayload struct {
 	Sort  string `query:"sort" validate:"in=desc;asc"`
 }
 
+type CreateProjectRepoTagPayload struct {
+	Override bool `json:"override" validate:"required"`
+	Src      struct {
+		Tag     string `json:"tag" validate:"required"`
+		Repo    string `json:"repo" validate:"required"`
+		Project string `json:"project" validate:"required"`
+		Digest  string `json:"digest" validate:"required"`
+	} `json:"src" validate:"required"`
+}
+
 type CreateProjectPayload struct {
 	Name   string `json:"name" validate:"required"`
 	Public bool   `json:"public" validate:"required"`
@@ -100,6 +111,17 @@ func (p *CreateProjectPayload) ToJSON() string {
 		"metadata": map[string]string{
 			"public": strconv.FormatBool(p.Public),
 		},
+	})
+
+	return string(jsonstr)
+}
+
+// Convert CreateProjectRepoTagPayload struct to JSON
+func (p *CreateProjectRepoTagPayload) ToJSON() string {
+	jsonstr, _ := json.Marshal(map[string]interface{}{
+		"override":  p.Override,
+		"src_image": fmt.Sprintf("%s/%s:%s", p.Src.Project, p.Src.Repo, p.Src.Digest),
+		"tag":       p.Src.Tag,
 	})
 
 	return string(jsonstr)

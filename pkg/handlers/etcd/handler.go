@@ -108,10 +108,10 @@ func (h *Handler) GetKey(key string, keysOnly, prefix bool, limit int64) (*clien
 
 	options = append(options, clientv3.WithLimit(limit))
 
-	res, err := h.client.Get(ctx, key, options...)
+	response, err := h.client.Get(ctx, key, options...)
 	cancel()
 
-	return res, h.eErrorHandling(err)
+	return response, h.eErrorHandling(err)
 }
 
 // Write Key Val to etcd
@@ -125,16 +125,16 @@ func (h *Handler) PutKey(key, val string, ttl int64) (*clientv3.PutResponse, err
 			return nil, h.eErrorHandling(err)
 		}
 
-		res, err := h.client.Put(context.TODO(), key, val, clientv3.WithLease(ctx.ID))
-		return res, h.eErrorHandling(err)
+		response, err := h.client.Put(context.TODO(), key, val, clientv3.WithLease(ctx.ID))
+		return response, h.eErrorHandling(err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout*time.Second)
 
-	res, err := h.client.Put(ctx, key, val)
+	response, err := h.client.Put(ctx, key, val)
 	cancel()
 
-	return res, h.eErrorHandling(err)
+	return response, h.eErrorHandling(err)
 }
 
 // Delete Key Val from etcd
@@ -146,10 +146,10 @@ func (h *Handler) DeleteKey(key string, prefix bool) (*clientv3.DeleteResponse, 
 		options = append(options, clientv3.WithPrefix())
 	}
 
-	res, err := h.client.Delete(ctx, key, options...)
+	response, err := h.client.Delete(ctx, key, options...)
 	cancel()
 
-	return res, h.eErrorHandling(err)
+	return response, h.eErrorHandling(err)
 }
 
 // Formatting errors returned by etcd
@@ -172,7 +172,7 @@ func (h *Handler) eErrorHandling(err error) error {
 
 // Remove DNS resolution records from CoreDNS
 func (h *Handler) DeleteService(service *shared.ServicePayload) error {
-	res, err := h.GetKey(
+	response, err := h.GetKey(
 		filepath.Join(h.DNSPrefix(), service.DNSName()),
 		false,
 		true,
@@ -183,7 +183,7 @@ func (h *Handler) DeleteService(service *shared.ServicePayload) error {
 		return fmt.Errorf("get key error: %s", err)
 	}
 
-	for _, item := range res.Kvs {
+	for _, item := range response.Kvs {
 		key := filepath.Join(h.DNSPrefix(), service.DNSName(), service.DNSKey())
 		if string(item.Key) != key {
 			continue

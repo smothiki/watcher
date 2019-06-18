@@ -43,8 +43,8 @@ func (h *Handler) Init(config *g.Configuration, itfs ...interface{}) error {
 }
 
 func (h *Handler) Created(e *shared.Event) {
-	res, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
-	if err == nil && res.Count > 0 {
+	response, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
+	if err == nil && response.Count > 0 {
 		return
 	}
 
@@ -53,8 +53,8 @@ func (h *Handler) Created(e *shared.Event) {
 }
 
 func (h *Handler) Deleted(e *shared.Event) {
-	res, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
-	if err == nil && res.Count > 0 {
+	response, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
+	if err == nil && response.Count > 0 {
 		return
 	}
 
@@ -63,8 +63,8 @@ func (h *Handler) Deleted(e *shared.Event) {
 }
 
 func (h *Handler) Updated(e *shared.Event) {
-	res, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
-	if err == nil && res.Count > 0 {
+	response, err := h.handlers.etcd.GetKey(e.CacheKey(), true, false, 1)
+	if err == nil && response.Count > 0 {
 		return
 	}
 

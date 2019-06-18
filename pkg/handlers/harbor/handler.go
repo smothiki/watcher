@@ -50,16 +50,16 @@ func (h *Handler) Request() *resty.Request {
 		Name: "sid", Value: sid, HttpOnly: true,
 	}).SetHostURL(h.config.Endpoint)
 
-	res, err := r.R().Get("/api/users/current")
-	if res.StatusCode() != http.StatusOK || err != nil {
+	response, err := r.R().Get("/api/users/current")
+	if response.StatusCode() != http.StatusOK || err != nil {
 		// form data
 		fd := map[string]string{"principal": h.config.Username, "password": h.config.Password}
-		res, err = r.R().SetFormData(fd).Post("/c/login")
+		response, err = r.R().SetFormData(fd).Post("/c/login")
 
 		// Check if the login is successful, and return an error if it fails.
-		if res.StatusCode() == http.StatusOK {
+		if response.StatusCode() == http.StatusOK {
 			sid = ""
-			for _, cookie := range res.Cookies() {
+			for _, cookie := range response.Cookies() {
 				if cookie.Name != "sid" {
 					continue
 				}

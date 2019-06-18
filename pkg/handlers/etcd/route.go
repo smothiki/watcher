@@ -64,13 +64,13 @@ func (h *Handler) getName(ctx echo.Context) error {
 func (h *Handler) getKey(ctx echo.Context) error {
 	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.GetKey(p.Key, p.KeysOnly, p.Prefix, p.Limit)
+	response, err := h.GetKey(p.Key, p.KeysOnly, p.Prefix, p.Limit)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
 	kvs := make([]kvmap, 0)
-	for _, ev := range res.Kvs {
+	for _, ev := range response.Kvs {
 		kv := kvmap{}
 		value := new(kvmap)
 
@@ -90,7 +90,7 @@ func (h *Handler) getKey(ctx echo.Context) error {
 
 	// more indicates if there are more keys to return in the requested range.
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: map[string]interface{}{
-		"count": res.Count, "kvs": kvs, "more": res.More,
+		"count": response.Count, "kvs": kvs, "more": response.More,
 	}}.JSON(ctx)
 }
 
@@ -114,11 +114,11 @@ func (h *Handler) putKey(ctx echo.Context) error {
 func (h *Handler) delKey(ctx echo.Context) error {
 	p, _ := ctx.Get("payload").(*payload)
 
-	res, err := h.DeleteKey(p.Key, p.Prefix)
+	response, err := h.DeleteKey(p.Key, p.Prefix)
 	if err != nil {
 		return shared.Responder{Status: http.StatusInternalServerError, Success: false, Msg: err}.JSON(ctx)
 	}
 
-	result := map[string]interface{}{"deleted": res.Deleted}
+	result := map[string]interface{}{"deleted": response.Deleted}
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: result}.JSON(ctx)
 }

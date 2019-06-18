@@ -88,12 +88,12 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 	}
 
 	var (
-		res *resty.Response
-		err error
+		response *resty.Response
+		err      error
 	)
 
 	if service.Protocol == "http" {
-		res, err = h.Request().SetBody(map[string]string{
+		response, err = h.Request().SetBody(map[string]string{
 			"host":    service.Host,
 			"type":    service.Protocol,
 			"port":    strconv.Itoa(service.Port),
@@ -101,7 +101,7 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 			"hc_port": strconv.Itoa(service.HealthCheck.Port),
 		}).Post(regURL)
 	} else {
-		res, err = h.Request().SetBody(map[string]string{
+		response, err = h.Request().SetBody(map[string]string{
 			"host": service.Host,
 			"type": "general",
 			"port": strconv.Itoa(service.Port),
@@ -109,11 +109,11 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("[%s] - [%s] register error: %s", service.Name, res.String(), err)
+		return fmt.Errorf("[%s] - [%s] register error: %s", service.Name, response.String(), err)
 	}
 
-	if res.StatusCode() != http.StatusOK {
-		return fmt.Errorf("[%s] - [%s] register error: %d", service.Name, res.String(), res.StatusCode())
+	if response.StatusCode() != http.StatusOK {
+		return fmt.Errorf("[%s] - [%s] register error: %d", service.Name, response.String(), response.StatusCode())
 	}
 
 	h.logger.Infof("[gateway][%s] - [%s] create successful", service.Name, service.String())
@@ -131,13 +131,13 @@ func (h *Handler) DeleteService(service *shared.ServicePayload) error {
 		)
 	}
 
-	res, err := h.Request().SetBody(service).Post(regURL)
+	response, err := h.Request().SetBody(service).Post(regURL)
 	if err != nil {
-		return fmt.Errorf("pod[%s] - [%s] unregister error: %s", service.Name, res.String(), err)
+		return fmt.Errorf("pod[%s] - [%s] unregister error: %s", service.Name, response.String(), err)
 	}
 
-	if res.StatusCode() != http.StatusOK {
-		return fmt.Errorf("pod[%s] - [%s] unregister error: %d", service.Name, res.String(), res.StatusCode())
+	if response.StatusCode() != http.StatusOK {
+		return fmt.Errorf("pod[%s] - [%s] unregister error: %d", service.Name, response.String(), response.StatusCode())
 	}
 
 	h.logger.Infof("[gateway][%s] - [%s] delete successful", service.Name, service.String())
