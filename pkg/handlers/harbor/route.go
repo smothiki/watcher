@@ -151,6 +151,8 @@ func (h *Handler) getProjectRepoTag(ctx echo.Context) error {
 	return shared.Responder{Status: http.StatusOK, Success: true, Result: tags}.JSON(ctx)
 }
 
+// Create image by tag info
+// Use CreateProjectRepoTagPayload to create image in harbor
 func (h *Handler) createProjectRepoTag(ctx echo.Context) error {
 	repoName := ctx.Param("repo")
 	projectName := ctx.Param("project")
