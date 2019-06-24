@@ -79,8 +79,8 @@ func (h *Handler) URL(namespace, path string) string {
 // Write service information to the API Gateway
 func (h *Handler) CreateService(service *shared.ServicePayload) error {
 	// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
-	regURL := h.URL(service.Namespace, fmt.Sprintf("/upstreams/%s/register", service.Name))
-	if regURL == "" {
+	url := h.URL(service.Namespace, fmt.Sprintf("/upstreams/%s/register", service.Name))
+	if url == "" {
 		return fmt.Errorf(
 			"namespace `%s` has no associated gateway config, %s register skipped",
 			service.Namespace, service.String(),
@@ -99,13 +99,13 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 			"port":    strconv.Itoa(service.Port),
 			"hc_path": service.HealthCheck.Path,
 			"hc_port": strconv.Itoa(service.HealthCheck.Port),
-		}).Post(regURL)
+		}).Post(url)
 	} else {
 		response, err = h.Request().SetBody(map[string]string{
 			"host": service.Host,
 			"type": "general",
 			"port": strconv.Itoa(service.Port),
-		}).Post(regURL)
+		}).Post(url)
 	}
 
 	if err != nil {
@@ -123,15 +123,15 @@ func (h *Handler) CreateService(service *shared.ServicePayload) error {
 // Remove service information from the API Gateway
 func (h *Handler) DeleteService(service *shared.ServicePayload) error {
 	// Get the URL of the handler in memory, when the `namespace` does not exist, skip the service
-	regURL := h.URL(service.Namespace, fmt.Sprintf("/upstreams/%s/unregister", service.Name))
-	if regURL == "" {
+	url := h.URL(service.Namespace, fmt.Sprintf("/upstreams/%s/unregister", service.Name))
+	if url == "" {
 		return fmt.Errorf(
 			"namespace `%s` has no associated gateway config, %s register skipped",
 			service.Namespace, service.String(),
 		)
 	}
 
-	response, err := h.Request().SetBody(service).Post(regURL)
+	response, err := h.Request().SetBody(service).Post(url)
 	if err != nil {
 		return fmt.Errorf("pod[%s] - [%s] unregister error: %s", service.Name, response.String(), err)
 	}
